@@ -142,6 +142,12 @@ export const dbService = {
     return res.data;
   },
 
+  // AUTH
+  authLogin: async (email, password) => {
+    const res = await apiClient.post('/auth/login', { email, password });
+    return res.data;
+  },
+
   // STUBS (To prevent UI crash where APIs are not yet built)
   getNotifications: async () => [],
   addNotification: async () => ({}),

@@ -545,7 +545,7 @@ export const SuperAdminDashboard = () => {
                     onFocus={() => setFromFocused(true)}
                     onBlur={() => setFromFocused(false)}
                     sx={{ bgcolor: 'background.paper', width: 130 }}
-                    inputProps={{ style: { fontWeight: 600, fontSize: '0.8rem' } }}
+                    slotProps={{ htmlInput: { style: { fontWeight: 600, fontSize: '0.8rem' } } }}
                   />
                   <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 700 }}>—</Typography>
                   <TextField
@@ -557,7 +557,7 @@ export const SuperAdminDashboard = () => {
                     onFocus={() => setToFocused(true)}
                     onBlur={() => setToFocused(false)}
                     sx={{ bgcolor: 'background.paper', width: 130 }}
-                    inputProps={{ style: { fontWeight: 600, fontSize: '0.8rem' } }}
+                    slotProps={{ htmlInput: { style: { fontWeight: 600, fontSize: '0.8rem' } } }}
                   />
                 </Box>
               )}

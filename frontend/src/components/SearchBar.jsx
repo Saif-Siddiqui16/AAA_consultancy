@@ -26,19 +26,21 @@ export const SearchBar = ({
         },
         ...sx,
       }}
-      InputProps={{
-        startAdornment: (
-          <InputAdornment position="start">
-            <SearchIcon sx={{ color: 'text.secondary', fontSize: '20px' }} />
-          </InputAdornment>
-        ),
-        endAdornment: value ? (
-          <InputAdornment position="end">
-            <IconButton onClick={onClear} size="small" edge="end">
-              <ClearIcon fontSize="small" />
-            </IconButton>
-          </InputAdornment>
-        ) : null,
+      slotProps={{
+        input: {
+          startAdornment: (
+            <InputAdornment position="start">
+              <SearchIcon sx={{ color: 'text.secondary', fontSize: '20px' }} />
+            </InputAdornment>
+          ),
+          endAdornment: value ? (
+            <InputAdornment position="end">
+              <IconButton onClick={onClear} size="small" edge="end">
+                <ClearIcon fontSize="small" />
+              </IconButton>
+            </InputAdornment>
+          ) : null,
+        }
       }}
     />
   );

@@ -823,11 +823,13 @@ export const DashboardLayout = () => {
           <ListItemText
             primary={t(item.label === 'Leads' && (currentUser?.role === 'consultant' || currentUser?.role === 'agent') ? 'Leads' : item.label)}
             sx={{ m: 0 }}
-            primaryTypographyProps={{
-              fontSize: '0.875rem',
-              fontWeight: active ? 600 : 500,
-              color: 'inherit',
-              lineHeight: 1,
+            slotProps={{
+              primary: {
+                fontSize: '0.875rem',
+                fontWeight: active ? 600 : 500,
+                color: 'inherit',
+                lineHeight: 1,
+              }
             }}
           />
         )}
@@ -1098,8 +1100,8 @@ export const DashboardLayout = () => {
               onClose={handleNotifMenuClose}
               anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
               transformOrigin={{ vertical: 'top', horizontal: 'right' }}
-              PaperProps={{
-                sx: { width: 340, maxHeight: 440, borderRadius: 3, mt: 1 },
+              slotProps={{
+                paper: { sx: { width: 340, maxHeight: 440, borderRadius: 3, mt: 1 } },
               }}
             >
               <Box sx={{ p: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -1159,8 +1161,8 @@ export const DashboardLayout = () => {
               open={Boolean(profileAnchorEl)}
               onClose={handleProfileMenuClose}
               onClick={handleProfileMenuClose}
-              PaperProps={{
-                sx: { width: 200, borderRadius: 3, mt: 1 },
+              slotProps={{
+                paper: { sx: { width: 200, borderRadius: 3, mt: 1 } },
               }}
             >
               <Box sx={{ px: 2, py: 1.5 }}>

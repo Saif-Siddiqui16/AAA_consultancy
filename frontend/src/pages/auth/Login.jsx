@@ -32,9 +32,6 @@ export const Login = () => {
   const navigate = useNavigate();
   const { login } = useAuth();
   const { showAlert } = useAlert();
-  const { data: consultants = [] } = useQuery({
-    queryKey: ['consultants'],
-    queryFn: dbService.getConsultants });
 
   const {
     register,
@@ -46,50 +43,15 @@ export const Login = () => {
       password: '' } });
 
   const onSubmit = async (data) => {
-    // Simulate API login
-    await new Promise((resolve) => setTimeout(resolve, 800));
-
-    const enteredEmail = data.email.toLowerCase().trim();
-    const enteredPassword = data.password;
-
-    // 1. Check Super Admin
-    if (enteredEmail === 'admin@aaa.com') {
-      login({
-        id: 'super-admin',
-        name: 'Wael Madi (CEO)',
-        email: 'wael.m@aaabusinessconsultancy.com',
-        role: 'super_admin',
-        avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150' });
-      showAlert('Logged in as Super Administrator', 'success');
+    try {
+      const res = await dbService.authLogin(data.email.toLowerCase().trim(), data.password);
+      login(res.user, res.token);
+      showAlert(`Logged in successfully as ${res.user.role}`, 'success');
       navigate('/dashboard');
-      return;
+    } catch (error) {
+      console.error("Login failed:", error);
+      showAlert(error.response?.data?.message || 'Invalid login credentials. Please check email/password.', 'error');
     }
-
-    // 2. Check dynamic consultants
-    const matchedConsultant = consultants.find(
-      (c) => c.email && c.email.toLowerCase().trim() === enteredEmail
-    );
-
-    if (matchedConsultant) {
-      // Check password matching (fallback to 'password123' for pre-seeded consultants)
-      const expectedPassword = matchedConsultant.password || 'password123';
-      if (enteredPassword === expectedPassword) {
-        login({
-          id: matchedConsultant.id,
-          name: matchedConsultant.name,
-          email: matchedConsultant.email,
-          role: matchedConsultant.role || 'consultant',
-          avatar: matchedConsultant.avatar || 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=150',
-          customPermissions: matchedConsultant.customPermissions
-        });
-        showAlert(`Logged in successfully as Consultant: ${matchedConsultant.name}`, 'success');
-        navigate('/dashboard');
-        return;
-      }
-    }
-
-    // 3. Fallback / error case
-    showAlert('Invalid login credentials. Please check email/password.', 'error');
   };
 
   const handleQuickLogin = (role) => {

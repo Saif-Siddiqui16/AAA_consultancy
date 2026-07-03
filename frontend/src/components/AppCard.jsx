@@ -6,7 +6,7 @@ import CardActions from '@mui/material/CardActions';
 import Typography from '@mui/material/Typography';
 import Box from '@mui/material/Box';
 import Divider from '@mui/material/Divider';
-import { motion } from 'framer-motion';
+import { motion } from 'motion/react';
 
 export const AppCard = ({
   title,

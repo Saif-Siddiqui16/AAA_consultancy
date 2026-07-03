@@ -49,13 +49,17 @@ export const AuthProvider = ({ children }) => {
     }
   }, [currentUser]);
 
-  const login = (user) => {
+  const login = (user, token) => {
     localStorage.setItem('crm-auth-user', JSON.stringify(user));
+    if (token) {
+      localStorage.setItem('token', token);
+    }
     setCurrentUser(user);
   };
 
   const logout = () => {
     localStorage.removeItem('crm-auth-user');
+    localStorage.removeItem('token');
     setCurrentUser(null);
   };
 
