@@ -5,9 +5,15 @@
 *   **Purpose:** Authenticate user and issue JWT tokens.
 *   **Request Body:** `email`, `password`.
 
+### `GET /api/v1/auth/me`
+*   **Purpose:** Fetch logged-in user profile.
+
 ### `POST /api/v1/users` (Add Agent)
 *   **Purpose:** Create staff members.
 *   **Request Body:** `fullName`, `email`, `password`, `hotlineNumber`, `role`, `spokenLanguages`, `nationalities`, `commissionRate`, `immigrationBio`, `customPermissions`.
+
+### `GET /api/v1/users/agents`
+*   **Purpose:** Fetch list of all consultants/agents for the Admin dashboards.
 
 ---
 
@@ -15,6 +21,9 @@
 ### `POST /api/v1/leads` (Lead Intake via Webhook/Ads)
 *   **Request Body:** `fullName`, `phone`, `email`, `source`, `campaignId`.
 *   **Trigger:** Logs lead and sends Automated WhatsApp First Response linking to `https://wa.me/971509554142`.
+
+### `GET /api/v1/leads`
+*   **Purpose:** List all leads for the Marketing and Admin dashboards.
 
 ### `POST /api/v1/consultations/book` (Booking Engine)
 *   **Validation:** 
@@ -55,6 +64,9 @@
 ### `POST /api/v1/payments/generate-link` (Phase 8)
 *   **Request Body:** `clientId`, `packageId`, `agreedToTerms` (Boolean).
 *   **Supported Gateways:** Apple Pay, Google Pay, Link Wallet, Visa, Mastercard, Tabby, Tamara.
+
+### `POST /api/v1/payments/webhook` (Phase 9 Webhook)
+*   **Purpose:** Listens to payment gateways. On success, unlocks the Customer Dashboard and sends the official receipt.
 
 ---
 
@@ -99,3 +111,41 @@
 
 ### `POST /api/v1/cases/:clientId/appeal`
 *   **Request Body:** `lawyerId`, `appealDeadline`.
+
+### `PATCH /api/v1/cases/:id/status`
+*   **Purpose:** For staff to manually update the 33 lead/client statuses outside of automated events.
+
+---
+
+## 7. Administrative & Foundational APIs (Frontend Integration)
+
+### 7.1 Settings & Customizations
+*   **`GET/PUT /api/v1/settings/general`**: Company info, vat rate, auto-assign rules.
+*   **`GET/PUT /api/v1/settings/customization`**: Role permissions, menu toggles (e.g., Marketing visibility).
+*   **`GET/PUT /api/v1/settings/lead-stages`**: Custom statuses and their emojis/colors.
+
+### 7.2 Product Catalog
+*   **`GET/PUT /api/v1/services`**: Manage base services offered.
+*   **`GET/PUT /api/v1/packages`**: Manage packages mapping to services.
+*   **`GET/PUT /api/v1/settings/templates/email`**: Manage automated email templates.
+*   **`GET/PUT /api/v1/settings/templates/whatsapp`**: Manage WhatsApp templates.
+
+### 7.3 Social Inbox Chat Engine
+*   **`GET /api/v1/conversations`**: Fetch WhatsApp/Telegram/Messenger chats.
+*   **`POST /api/v1/conversations/:id/messages`**: Send social messages out from the CRM.
+*   **`PATCH /api/v1/conversations/:id/read`**: Mark chat thread as read.
+
+### 7.4 Finance, Commissions & Refunds
+*   **`GET/PUT /api/v1/commissions/rates`**: Agent custom commission rates (e.g., 10% or fixed).
+*   **`GET /api/v1/commissions/reports`**: Calculated reports on who earned what based on cleared invoices.
+*   **`GET /api/v1/refunds`**: List of all refund requests.
+*   **`POST /api/v1/payments/:invoiceId/refund`**: Triggers refund workflow, maxing out at 50% calculated amount.
+
+### 7.5 System Notifications
+*   **`GET /api/v1/notifications`**: Fetch alert bell notifications.
+*   **`PATCH /api/v1/notifications/:id/read`**: Mark specific notification as read.
+*   **`PATCH /api/v1/notifications/read-all`**: Mark all as read.
+
+### 7.6 Cases Dashboards
+*   **`GET /api/v1/cases/active`**: List all currently processing cases (excluding `Closed` and `Refused`).
+*   **`GET /api/v1/cases/closed`**: List all closed/archived cases.
