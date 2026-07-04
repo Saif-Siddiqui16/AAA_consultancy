@@ -6,7 +6,20 @@ const prisma = require('../config/db');
 // @access  Private (Admin/Super Admin)
 const getAgents = async (req, res) => {
   try {
+    let whereClause = {};
+    if (req.user && req.user.role === 'admin') {
+      whereClause = {
+        OR: [
+          { createdById: req.user.id },
+          { id: req.user.id }
+        ]
+      };
+    } else if (req.user && req.user.role !== 'super_admin' && req.user.role !== 'admin') {
+      whereClause = { id: req.user.id }; // Other roles only see themselves if they hit this route
+    }
+
     const agents = await prisma.user.findMany({
+      where: whereClause,
       select: {
         id: true,
         fullName: true,
@@ -66,7 +79,8 @@ const createUser = async (req, res) => {
         nationalities,
         commissionRate: Number(commissionRate) || 0,
         immigrationBio,
-        customPermissions
+        customPermissions,
+        createdById: req.user ? req.user.id : null
       }
     });
 
