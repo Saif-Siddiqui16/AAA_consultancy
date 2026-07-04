@@ -43,9 +43,9 @@ export const AgentDashboard = () => {
   const agentId = currentUser?.id || '';
   const agentName = currentUser?.name || 'Agent';
 
-  const myLeads = allLeads.filter((l) => l.assignedConsultantId === agentId);
-  const myClients = allClients.filter((cl) => cl.assignedConsultantId === agentId);
-  const myConsultations = allConsultations.filter((c) => c.assignedConsultantId === agentId);
+  const myLeads = allLeads.filter((l) => l.assignedToId === agentId);
+  const myClients = allClients.filter((cl) => cl.assignedToId === agentId);
+  const myConsultations = allConsultations.filter((c) => c.consultantId === agentId);
 
   // Stats Calculations
   const totalConsultations = myConsultations.length;

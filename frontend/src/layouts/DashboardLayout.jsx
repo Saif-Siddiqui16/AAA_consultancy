@@ -389,6 +389,11 @@ export const DashboardLayout = () => {
       return currentPath.includes('/social-inbox') && itemPath === getDynamicPath({ path: location.pathname + location.search });
     }
 
+    // Exact match for payments to prevent overlap with refund-commission
+    if (itemPath.endsWith('/payments')) {
+      return currentPath === itemPath || currentPath === itemPath + '/';
+    }
+
     // Default prefix match
     return currentPath.startsWith(itemPath.split('?')[0]);
   };

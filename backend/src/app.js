@@ -24,6 +24,7 @@ app.use('/api/v1/cases', require('./routes/caseRoutes'));
 app.use('/api/v1/consultations', require('./routes/consultationRoutes'));
 app.use('/api/v1/payments', require('./routes/paymentRoutes'));
 app.use('/api/v1/documents', require('./routes/documentRoutes'));
+app.use('/api/v1/marketing', require('./routes/marketingRoutes'));
 
 // Start Server
 const PORT = process.env.PORT || 5000;

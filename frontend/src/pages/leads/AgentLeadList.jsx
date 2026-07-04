@@ -276,7 +276,7 @@ export const AgentLeadList = () => {
 
   const handleOpenAssignModal = (lead) => {
     setSelectedLead(lead);
-    setTargetConsultantId(lead.assignedConsultantId || '');
+    setTargetConsultantId(lead.assignedToId || '');
     setAssignModalOpen(true);
   };
 
@@ -307,7 +307,7 @@ export const AgentLeadList = () => {
 
       // Role-based scoping: consultants only see their own assigned leads
       if (!isAdmin && !isOperations && currentUser && currentUser.role === 'consultant') {
-        if (lead.assignedConsultantId !== currentUser.id) {
+        if (lead.assignedToId !== currentUser.id) {
           return false;
         }
       }
@@ -315,7 +315,7 @@ export const AgentLeadList = () => {
       const matchService = filters.serviceId ? lead.serviceId === filters.serviceId : true;
       const matchStatus = filters.status ? lead.status === filters.status : true;
       const matchConsultant = filters.assignedConsultantId
-        ? lead.assignedConsultantId === filters.assignedConsultantId
+        ? lead.assignedToId === filters.assignedConsultantId
         : true;
       const matchToday = filters.todayOnly ? lead.createdDate?.startsWith('2026-06-18') : true;
 
@@ -378,7 +378,7 @@ export const AgentLeadList = () => {
       id: 'assignedConsultant',
       label: 'Agent',
       render: (row) => {
-        const agent = agents.find((c) => c.id === row.assignedConsultantId);
+        const agent = agents.find((c) => c.id === row.assignedToId);
         return agent ? agent.name : <Typography variant="caption" color="text.secondary">Unassigned</Typography>;
       } },
     { id: 'source', label: 'Source', sortable: true },
@@ -783,7 +783,7 @@ export const AgentLeadList = () => {
               <MenuItem value="">Unassigned</MenuItem>
               {agents.map((c) => (
                 <MenuItem key={c.id} value={c.id}>
-                  {c.name} ({c.languages.join('/')}) - {c.casesCount} active cases
+                  {c.name} ({(c.languages || []).join('/')}) - {c.casesCount || 0} active cases
                 </MenuItem>
               ))}
             </Select>

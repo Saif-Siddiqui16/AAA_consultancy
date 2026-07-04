@@ -146,7 +146,7 @@ export const AgentCalendarView = () => {
       (c) =>
         c.meetingDate === dateStr &&
         (activeAgentId 
-          ? (c.assignedConsultantId === activeAgentId || (isConsultant && !c.assignedConsultantId))
+          ? (c.consultantId === activeAgentId || (isConsultant && !c.consultantId))
           : true)
     );
     return { dayNum, dateStr, meetings: dayMeetings };
@@ -157,7 +157,7 @@ export const AgentCalendarView = () => {
     (c) =>
       c.meetingDate === selectedDate &&
       (activeAgentId 
-        ? (c.assignedConsultantId === activeAgentId || (isConsultant && !c.assignedConsultantId))
+        ? (c.consultantId === activeAgentId || (isConsultant && !c.consultantId))
         : true)
   );
 

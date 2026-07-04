@@ -51,7 +51,7 @@ export const SuperAdminAgentsPerformance = () => {
       id: 'activeCases',
       label: 'Active Cases',
       render: (row) => {
-        const clientCases = allClients.filter((c) => c.assignedConsultantId === row.id);
+        const clientCases = allClients.filter((c) => c.assignedToId === row.id);
         const activeCount = clientCases.filter((c) => c.status !== 'Completed' && c.visaStatus !== 'Approved').length;
         return activeCount;
       },
@@ -60,7 +60,7 @@ export const SuperAdminAgentsPerformance = () => {
       id: 'closedCases',
       label: 'Closed Cases',
       render: (row) => {
-        const clientCases = allClients.filter((c) => c.assignedConsultantId === row.id);
+        const clientCases = allClients.filter((c) => c.assignedToId === row.id);
         const closedCount = clientCases.filter((c) => c.status === 'Completed' || c.visaStatus === 'Approved').length;
         return closedCount;
       },
@@ -69,7 +69,7 @@ export const SuperAdminAgentsPerformance = () => {
       id: 'totalMeetings',
       label: 'Total Meetings',
       render: (row) => {
-        const meetingsCount = allConsultations.filter((c) => c.assignedConsultantId === row.id).length;
+        const meetingsCount = allConsultations.filter((c) => c.consultantId === row.id).length;
         return meetingsCount;
       },
     },
@@ -77,8 +77,8 @@ export const SuperAdminAgentsPerformance = () => {
       id: 'conversion',
       label: 'Conv. Rate (%)',
       render: (row) => {
-        const meetings = allConsultations.filter((c) => c.assignedConsultantId === row.id);
-        const clientCases = allClients.filter((c) => c.assignedConsultantId === row.id);
+        const meetings = allConsultations.filter((c) => c.consultantId === row.id);
+        const clientCases = allClients.filter((c) => c.assignedToId === row.id);
         const closed = clientCases.filter((c) => c.status === 'Completed' || c.visaStatus === 'Approved').length;
         const rate = meetings.length > 0 ? Math.round((closed / meetings.length) * 100) : 0;
         return `${rate}%`;
@@ -88,7 +88,7 @@ export const SuperAdminAgentsPerformance = () => {
       id: 'revenue',
       label: 'Total Revenue',
       render: (row) => {
-        const clientIds = allClients.filter((c) => c.assignedConsultantId === row.id).map((c) => c.id);
+        const clientIds = allClients.filter((c) => c.assignedToId === row.id).map((c) => c.id);
         const paidPayments = allPayments.filter((p) => clientIds.includes(p.clientId) && p.status === 'Paid');
         const revenue = paidPayments.reduce((sum, p) => sum + (p.amount || 0), 0);
         return `€${revenue.toLocaleString()}`;
@@ -98,7 +98,7 @@ export const SuperAdminAgentsPerformance = () => {
       id: 'commission',
       label: 'Commission (10%)',
       render: (row) => {
-        const clientIds = allClients.filter((c) => c.assignedConsultantId === row.id).map((c) => c.id);
+        const clientIds = allClients.filter((c) => c.assignedToId === row.id).map((c) => c.id);
         const paidPayments = allPayments.filter((p) => clientIds.includes(p.clientId) && p.status === 'Paid');
         const revenue = paidPayments.reduce((sum, p) => sum + (p.amount || 0), 0);
         const commission = Math.round(revenue * 0.1);
@@ -107,10 +107,12 @@ export const SuperAdminAgentsPerformance = () => {
     },
   ];
 
-  // Filter agents by search term
+  // Filter agents by search term and role
   const filteredAgents = agents.filter((agent) =>
-    agent.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    agent.email.toLowerCase().includes(searchTerm.toLowerCase())
+    agent.role === 'consultant' && (
+      agent.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      agent.email.toLowerCase().includes(searchTerm.toLowerCase())
+    )
   );
 
   return (

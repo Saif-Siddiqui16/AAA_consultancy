@@ -171,7 +171,7 @@ export const AgentClientList = () => {
       if (!filterByDate(client.onboardingDate, startDate, endDate)) return false;
 
       // ENFORCED: Agent only sees their assigned clients
-      if (client.assignedConsultantId !== currentUser?.id) {
+      if (client.assignedToId !== currentUser?.id) {
         return false;
       }
 
@@ -196,7 +196,7 @@ export const AgentClientList = () => {
       }
 
       const matchConsultant = filters.assignedConsultantId
-        ? client.assignedConsultantId === filters.assignedConsultantId
+        ? client.assignedToId === filters.assignedConsultantId
         : true;
 
       return matchSearch && matchService && matchStatus && matchConsultant;
@@ -241,7 +241,7 @@ export const AgentClientList = () => {
       id: 'assignedConsultant',
       label: 'Case Manager',
       render: (row) => {
-        const c = consultants.find((cons) => cons.id === row.assignedConsultantId);
+        const c = consultants.find((cons) => cons.id === row.assignedToId);
         return c ? c.name : 'Unknown';
       },
     },

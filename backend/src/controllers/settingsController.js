@@ -47,4 +47,217 @@ const getLeadStages = async (req, res) => {
   res.json(DEFAULT_LEAD_STAGES);
 }
 
-module.exports = { getCustomizationSettings, getLeadStages };
+const { PrismaClient } = require('@prisma/client');
+const prisma = new PrismaClient();
+
+const getCompanySettings = async (req, res) => {
+  try {
+    let settings = await prisma.companySetting.findFirst();
+    if (!settings) {
+      settings = await prisma.companySetting.create({
+        data: {}
+      });
+    }
+    res.json(settings);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+const updateCompanySettings = async (req, res) => {
+  try {
+    const data = req.body;
+    let settings = await prisma.companySetting.findFirst();
+    if (!settings) {
+      settings = await prisma.companySetting.create({ data });
+    } else {
+      settings = await prisma.companySetting.update({
+        where: { id: settings.id },
+        data
+      });
+    }
+    res.json(settings);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+const getVisaServices = async (req, res) => {
+  try {
+    const services = await prisma.visaService.findMany();
+    res.json(services);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+const updateVisaServices = async (req, res) => {
+  try {
+    const services = req.body;
+    for (const s of services) {
+      if (s.id && !s.id.startsWith('srv_')) {
+        const exists = await prisma.visaService.findUnique({ where: { id: s.id } });
+        if (exists) {
+          await prisma.visaService.update({
+            where: { id: s.id },
+            data: {
+              name: s.name,
+              category: s.category,
+              basePrice: s.basePrice,
+              active: s.active
+            }
+          });
+        }
+      } else {
+        await prisma.visaService.create({
+          data: {
+            name: s.name,
+            category: s.category,
+            basePrice: s.basePrice,
+            active: s.active
+          }
+        });
+      }
+    }
+    const allServices = await prisma.visaService.findMany();
+    res.json(allServices);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+const getPackages = async (req, res) => {
+  try {
+    const packages = await prisma.relocationPackage.findMany();
+    res.json(packages);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+const updatePackages = async (req, res) => {
+  try {
+    const packages = req.body;
+    for (const p of packages) {
+      if (p.id && !p.id.startsWith('pkg_')) {
+        const exists = await prisma.relocationPackage.findUnique({ where: { id: p.id } });
+        if (exists) {
+          await prisma.relocationPackage.update({
+            where: { id: p.id },
+            data: {
+              name: p.name,
+              description: p.description,
+              price: p.price,
+              includes: p.includes
+            }
+          });
+        }
+      } else {
+        await prisma.relocationPackage.create({
+          data: {
+            name: p.name,
+            description: p.description,
+            price: p.price,
+            includes: p.includes
+          }
+        });
+      }
+    }
+    const allPkgs = await prisma.relocationPackage.findMany();
+    res.json(allPkgs);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+const getEmailTemplates = async (req, res) => {
+  try {
+    const templates = await prisma.template.findMany({
+      where: { type: 'email' }
+    });
+    res.json(templates);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+const updateEmailTemplates = async (req, res) => {
+  try {
+    const templates = req.body;
+    for (const t of templates) {
+      const exists = await prisma.template.findUnique({ where: { id: t.id } });
+      if (exists) {
+        await prisma.template.update({
+          where: { id: t.id },
+          data: { subject: t.subject, body: t.body }
+        });
+      } else {
+        await prisma.template.create({
+          data: {
+            id: t.id,
+            type: 'email',
+            subject: t.subject,
+            body: t.body
+          }
+        });
+      }
+    }
+    const all = await prisma.template.findMany({ where: { type: 'email' } });
+    res.json(all);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+const getWhatsappTemplates = async (req, res) => {
+  try {
+    const templates = await prisma.template.findMany({
+      where: { type: 'whatsapp' }
+    });
+    res.json(templates);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+const updateWhatsappTemplates = async (req, res) => {
+  try {
+    const templates = req.body;
+    for (const t of templates) {
+      const exists = await prisma.template.findUnique({ where: { id: t.id } });
+      if (exists) {
+        await prisma.template.update({
+          where: { id: t.id },
+          data: { body: t.body }
+        });
+      } else {
+        await prisma.template.create({
+          data: {
+            id: t.id,
+            type: 'whatsapp',
+            body: t.body
+          }
+        });
+      }
+    }
+    const all = await prisma.template.findMany({ where: { type: 'whatsapp' } });
+    res.json(all);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+module.exports = { 
+  getCustomizationSettings, 
+  getLeadStages,
+  getCompanySettings,
+  updateCompanySettings,
+  getVisaServices,
+  updateVisaServices,
+  getPackages,
+  updatePackages,
+  getEmailTemplates,
+  updateEmailTemplates,
+  getWhatsappTemplates,
+  updateWhatsappTemplates
+};

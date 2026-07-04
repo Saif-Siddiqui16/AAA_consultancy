@@ -1,9 +1,11 @@
-import React, { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import React, { useState, useEffect } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useAlert } from '../../contexts/AlertContext';
 import { dbService } from '../../services/dbService';
 import Box from '@mui/material/Box';
 import Paper from '@mui/material/Paper';
 import Typography from '@mui/material/Typography';
+import Button from '@mui/material/Button';
 
 import Divider from '@mui/material/Divider';
 import Chip from '@mui/material/Chip';
@@ -64,26 +66,42 @@ const SOURCE_COLORS = {
   'YouTube Ads':        '#FF0000' };
 
 export const SuperAdminMarketing = () => {
+  const queryClient = useQueryClient();
+  const { showAlert } = useAlert();
+
   const { data: allLeads = [] } = useQuery({ queryKey: ['leads'], queryFn: dbService.getLeads });
   const { data: allClients = [] } = useQuery({ queryKey: ['clients'], queryFn: dbService.getClients });
   const { data: allPayments = [] } = useQuery({ queryKey: ['payments'], queryFn: dbService.getPayments });
+  const { data: fetchedSpend = {} } = useQuery({ queryKey: ['marketingSpend'], queryFn: dbService.getMarketingSpend });
 
   // Ad Spend per source — manually editable by Super Admin
-  const [adSpend, setAdSpend] = useState({
-    'Facebook Ads':       1200,
-    'Instagram Ads':      800,
-    'TikTok Ads':         600,
-    'Google Ads':         1500,
-    'Website Leads':      300,
-    'WhatsApp Leads':     0,
-    'Referrals':          0,
-    'Organic Social Media': 0,
-    'Agent Referral':     0,
-    'LinkedIn':           400,
-    'Twitter/X':          200,
-    'YouTube Ads':        500 });
-
+  const [adSpend, setAdSpend] = useState({});
   const [showAdSpendEditor, setShowAdSpendEditor] = useState(false);
+
+  useEffect(() => {
+    // Populate default values
+    const newSpend = { ...fetchedSpend };
+    ALL_SOURCES.forEach(src => {
+      if (newSpend[src] === undefined) newSpend[src] = 0;
+    });
+    setAdSpend(newSpend);
+  }, [fetchedSpend]);
+
+  const updateSpendMutation = useMutation({
+    mutationFn: dbService.updateMarketingSpend,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['marketingSpend'] });
+      showAlert('Ad spend configuration saved!', 'success');
+      setShowAdSpendEditor(false);
+    },
+    onError: () => {
+      showAlert('Failed to save ad spend configuration', 'error');
+    }
+  });
+
+  const handleSaveAdSpend = () => {
+    updateSpendMutation.mutate(adSpend);
+  };
 
   // Build source stats
   const getSourceStats = () => {
@@ -304,8 +322,18 @@ export const SuperAdminMarketing = () => {
             <Typography variant="body2" color="text.secondary">Enter monthly ad budget per channel to calculate ROI & Cost Per Client.</Typography>
           </Box>
           <Chip
-            label={showAdSpendEditor ? 'Hide Editor' : 'Edit Ad Spend'}
-            onClick={() => setShowAdSpendEditor(!showAdSpendEditor)}
+            label={showAdSpendEditor ? 'Cancel' : 'Edit Ad Spend'}
+            onClick={() => {
+              if (showAdSpendEditor) {
+                // Reset to fetched on cancel
+                const newSpend = { ...fetchedSpend };
+                ALL_SOURCES.forEach(src => {
+                  if (newSpend[src] === undefined) newSpend[src] = 0;
+                });
+                setAdSpend(newSpend);
+              }
+              setShowAdSpendEditor(!showAdSpendEditor);
+            }}
             color="primary"
             variant="outlined"
             sx={{ fontWeight: 700, cursor: 'pointer' }}
@@ -329,6 +357,16 @@ export const SuperAdminMarketing = () => {
                 />
               </Box>
             ))}
+            <Box className="col-span-12 mt-2" sx={{ display: 'flex', justifyContent: 'flex-end' }}>
+              <Button 
+                variant="contained" 
+                color="primary" 
+                onClick={handleSaveAdSpend}
+                disabled={updateSpendMutation.isLoading}
+              >
+                {updateSpendMutation.isLoading ? 'Saving...' : 'Save Configuration'}
+              </Button>
+            </Box>
           </Box>
         )}
 

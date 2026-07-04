@@ -65,6 +65,7 @@ import AgentSocialInbox from '../pages/social/AgentSocialInbox';
 import ClientIntakeForm from '../pages/public/ClientIntakeForm';
 import LeadIntakeForm from '../pages/public/LeadIntakeForm';
 import ClientPortalLogin from '../pages/public/ClientPortalLogin';
+import ClientPortalChangePassword from '../pages/public/ClientPortalChangePassword';
 import ClientPortalDocs from '../pages/public/ClientPortalDocs';
 import AdminDocumentVerificationDashboard from '../pages/documents/AdminDocumentVerificationDashboard';
 import OperationsDocumentVerificationDashboard from '../pages/documents/OperationsDocumentVerificationDashboard';
@@ -261,6 +262,21 @@ const PaymentsRedirect = () => {
   return <Navigate to={`/${getPrefixForRole(currentUser?.role)}/payments`} replace />;
 };
 
+const ClientPortalGuard = ({ children }) => {
+  const clientData = JSON.parse(localStorage.getItem('clientData') || 'null');
+  const location = useLocation();
+
+  if (!clientData) {
+    return <Navigate to="/portal/login" replace />;
+  }
+
+  if (clientData.isTemporaryPassword && location.pathname !== '/portal/change-password') {
+    return <Navigate to="/portal/change-password" replace />;
+  }
+
+  return children;
+};
+
 export const AppRoutes = () => {
   return (
     <Routes>
@@ -277,7 +293,16 @@ export const AppRoutes = () => {
 
       {/* Client Portal (Protected via simple login or token in real app, keeping route structure) */}
       <Route path="/portal/login" element={<ClientPortalLogin />} />
-      <Route path="/portal/documents/:clientId" element={<ClientPortalDocs />} />
+      <Route path="/portal/change-password" element={
+        <ClientPortalGuard>
+          <ClientPortalChangePassword />
+        </ClientPortalGuard>
+      } />
+      <Route path="/portal/documents/:clientId" element={
+        <ClientPortalGuard>
+          <ClientPortalDocs />
+        </ClientPortalGuard>
+      } />
 
       {/* Main CRM Dashboard Shell Layout (Protected) */}
       <Route

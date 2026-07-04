@@ -788,7 +788,7 @@ export const SuperAdminLeadList = () => {
               <MenuItem value="">Unassigned</MenuItem>
               {agents.map((c) => (
                 <MenuItem key={c.id} value={c.id}>
-                  {c.name} ({c.languages.join('/')}) - {c.casesCount} active cases
+                  {c.name} ({(c.languages || []).join('/')}) - {c.casesCount || 0} active cases
                 </MenuItem>
               ))}
             </Select>

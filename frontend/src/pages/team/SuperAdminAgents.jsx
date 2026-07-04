@@ -374,8 +374,7 @@ export const SuperAdminAgents = () => {
   };
 
   const getPeriodRange = (rangeType, customDaysVal = 14) => {
-    const todayDateStr = '2026-06-18';
-    const today = parseDate(todayDateStr);
+    const today = new Date();
     let start, end;
 
     if (rangeType === 'Last 7 Days') {
@@ -429,7 +428,8 @@ export const SuperAdminAgents = () => {
     const totalConsultations = agentConsultations.length;
 
     // Today's Consultations
-    const todayDateStr = '2026-06-18';
+    const today = new Date();
+    const todayDateStr = formatDate(today);
     const todayConsultations = rawConsultations.filter((c) => c.meetingDate === todayDateStr).length;
 
     // Upcoming Consultations
@@ -480,8 +480,9 @@ export const SuperAdminAgents = () => {
     // Agent Commission (dynamic rate from agent.commissionRate or fallback to 10)
     const rate = agent.commissionRate !== undefined ? agent.commissionRate : 10;
     
-    // Monthly Agent Commission (simulated for current mock month 2026-06)
-    const currentMonthStr = '2026-06';
+    // Monthly Agent Commission
+    const now = new Date();
+    const currentMonthStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
     const monthlyRevenue = allPayments.filter(p => clientIds.includes(p.clientId))
       .filter((p) => p.status === 'Paid' && (p.paymentDate || p.dueDate)?.startsWith(currentMonthStr))
       .reduce((sum, p) => sum + (p.totalPaid || 0), 0);
@@ -515,7 +516,7 @@ export const SuperAdminAgents = () => {
     // 1. Join event
     list.push({
       id: 'join',
-      date: agent.joiningDate || '2025-01-15',
+      date: agent.createdAt ? agent.createdAt.split('T')[0] : formatDate(new Date()),
       title: 'Joined AAA Consultancy Team',
       description: 'Account registered as Spain Immigration Consultant.',
       type: 'system',
@@ -527,7 +528,7 @@ export const SuperAdminAgents = () => {
     agentConsultations.forEach(c => {
       list.push({
         id: `c_${c.id}`,
-        date: c.meetingDate || '2025-06-01',
+        date: c.meetingDate || formatDate(new Date()),
         title: `Consultation Booked: ${c.firstName} ${c.lastName}`,
         description: `Slot: ${c.slot} | Preferred Language: ${c.preferredLanguage} | Status: ${c.status}`,
         type: 'consultation',
@@ -540,7 +541,7 @@ export const SuperAdminAgents = () => {
     agentClients.forEach(cl => {
       list.push({
         id: `cl_open_${cl.id}`,
-        date: cl.onboardingDate || '2025-02-10',
+        date: cl.onboardingDate || formatDate(new Date()),
         title: `Client Onboarded: ${cl.firstName} ${cl.lastName}`,
         description: `Visa Case started for Spain ${cl.serviceId?.toUpperCase() || 'Immigration'}. Current Status: ${cl.status}`,
         type: 'case',
@@ -550,7 +551,7 @@ export const SuperAdminAgents = () => {
       if (cl.status === 'Completed' || cl.visaStatus === 'Approved') {
         list.push({
           id: `cl_close_${cl.id}`,
-          date: cl.completionDate || cl.onboardingDate || '2025-06-15',
+          date: cl.completionDate || cl.onboardingDate || formatDate(new Date()),
           title: `Visa Approved: ${cl.firstName} ${cl.lastName}`,
           description: `Spain Visa application successfully approved and case file closed.`,
           type: 'case',
@@ -565,7 +566,7 @@ export const SuperAdminAgents = () => {
     agentPayments.forEach(p => {
       list.push({
         id: `pay_${p.id}`,
-        date: p.paymentDate || p.dueDate || '2025-06-01',
+        date: p.paymentDate || p.dueDate || formatDate(new Date()),
         title: p.status === 'Paid' ? `Invoice Paid: €${p.amount - (p.discount || 0)}` : `Invoice Issued (Pending): €${p.amount - (p.discount || 0)}`,
         description: `Invoice: ${p.id} | Method: ${p.paymentMethod || 'Credit Card'} | Status: ${p.status} | Agent Commission (10%): €${Math.round((p.amount - (p.discount || 0)) * 0.1)}`,
         type: 'payment',

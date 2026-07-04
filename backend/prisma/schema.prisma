@@ -17,6 +17,8 @@ model User {
   spokenLanguages  Json?    // Array of strings
   nationalities    Json?    // Array of strings
   commissionRate   Float?   @default(0)
+  commissionType   String?  @default("10%")
+  commissionPaid   Float?   @default(0)
   immigrationBio   String?  @db.Text
   customPermissions Json?   // e.g. { canViewFinance: true }
   createdAt        DateTime @default(now())
@@ -61,6 +63,8 @@ model Client {
   firstName        String
   lastName         String
   email            String   @unique
+  password         String?
+  isTemporaryPassword Boolean @default(true)
   phone            String
   nationality      String?
   countryOfResidence String?
@@ -84,6 +88,7 @@ model Client {
   documents        Document[]
   payments         Payment[]
   applicationCycles ApplicationCycle[]
+  refundRequests   RefundRequest[]
 
   @@map("clients")
 }
@@ -169,4 +174,70 @@ model Document {
   updatedAt        DateTime @updatedAt
 
   @@map("documents")
+}
+
+model RefundRequest {
+  id          String   @id @default(uuid())
+  clientId    String
+  client      Client   @relation(fields: [clientId], references: [id])
+  
+  category    String
+  reason      String?  @db.Text
+  amount      Float
+  status      String   @default("Pending Review") // Pending Review, Approved, Processed, Rejected
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("refund_requests")
+}
+
+model CompanySetting {
+  id                   String   @id @default(uuid())
+  companyName          String   @default("AAA Business Consultancy LLC")
+  phone                String   @default("+971 50 955 4142")
+  email                String   @default("info@aaabusinessconsultancy.com")
+  address              String   @default("Business Village, Block B, 4th Floor, Office F09, Deira, Dubai, UAE")
+  vatRate              Float    @default(5)
+  vatId                String   @default("VAT-AE-2026-9932")
+  website              String   @default("https://aaabusinessconsultancy.com")
+  incorporationDate    String   @default("2018-05-12")
+  autoAssignConsultant Boolean  @default(true)
+  recordingStorage     String   @default("cloud")
+  swornTranslationRates Json?
+  
+  updatedAt            DateTime @updatedAt
+
+  @@map("company_settings")
+}
+
+model VisaService {
+  id                   String   @id @default(uuid())
+  name                 String
+  category             String
+  basePrice            Float
+  active               Boolean  @default(true)
+
+  @@map("visa_services")
+}
+
+model RelocationPackage {
+  id                   String   @id @default(uuid())
+  name                 String
+  description          String   @db.Text
+  price                Float
+  includes             Json?    // Array of strings
+
+  @@map("relocation_packages")
+}
+
+model Template {
+  id                   String   @id @default(uuid())
+  type                 String   // "email" or "whatsapp"
+  subject              String?  
+  body                 String   @db.Text
+  
+  updatedAt            DateTime @updatedAt
+
+  @@map("templates")
 }

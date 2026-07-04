@@ -153,9 +153,13 @@ export const OperationsAgents = () => {
   const { data: customizationSettings } = useQuery({ queryKey: ['customization-settings'], queryFn: dbService.getCustomizationSettings });
 
   // Fetch Agents dynamically
-  const { data: agents = [], isLoading } = useQuery({
+  const { data: allAgentsData = [], isLoading } = useQuery({
     queryKey: ['agents'],
-    queryFn: dbService.getAgents });
+    queryFn: dbService.getAgents 
+  });
+
+  // Operations should only see and manage consultants/agents
+  const agents = allAgentsData.filter(a => ['consultant', 'agent'].includes(a.role?.toLowerCase()));
 
   // Set first agent as active if none selected
   useEffect(() => {

@@ -233,8 +233,8 @@ export const SuperAdminDocumentVerificationDashboard = () => {
     }
   });
 
-  // Filter clients who have completed profiling intake OR have uploaded documents
-  const intakeClients = clients.filter(c => c && (c.passportNumber || documents.some(d => d.clientId === c.id)));
+  // Filter clients to show all so portal credentials can be generated
+  const intakeClients = clients;
 
   // Auto-select first client if none selected
   useEffect(() => {
@@ -582,19 +582,24 @@ export const SuperAdminDocumentVerificationDashboard = () => {
                 }}
               />
               {/* Generate button */}
-              {selectedClient && (
-                <Button
-                  variant="contained"
-                  color="secondary"
-                  size="small"
-                  onClick={() => {
-                    window.alert(`Portal Credentials Generated:\n\nPortal URL: /portal/login\nUsername: ${selectedClient.id}\nPassword: password123\n\nPlease share these with the client securely.`);
-                  }}
-                  sx={{ textTransform: 'none', fontWeight: 'bold', whiteSpace: 'nowrap', flexShrink: 0 }}
-                >
-                  Generate Portal Credentials
-                </Button>
-              )}
+              <Button
+                variant="contained"
+                color="secondary"
+                size="small"
+                disabled={!selectedClient}
+                onClick={async () => {
+                  try {
+                    const res = await dbService.generateClientCredentials(selectedClient.id);
+                    window.alert(`Portal Credentials Generated:\n\nPortal URL: /portal/login\nUsername: ${selectedClient?.id}\nPassword: ${res.password}\n\nPlease share these with the client securely.`);
+                  } catch (error) {
+                    console.error('Error generating credentials', error);
+                    window.alert('Failed to generate credentials. Ensure backend is running.');
+                  }
+                }}
+                sx={{ textTransform: 'none', fontWeight: 'bold', whiteSpace: 'nowrap', flexShrink: 0 }}
+              >
+                Generate Portal Credentials
+              </Button>
             </Box>
           </Box>
           {/* Row 2: Filter dropdowns */}

@@ -47,6 +47,14 @@ export const dbService = {
     const res = await apiClient.patch(`/clients/${clientId}/status`, { visaStatus, status });
     return res.data;
   },
+  generateClientCredentials: async (clientId) => {
+    const res = await apiClient.post(`/clients/${clientId}/credentials`);
+    return res.data;
+  },
+  clientLogin: async (clientId, password) => {
+    const res = await apiClient.post('/clients/login', { clientId, password });
+    return res.data;
+  },
   getActiveCases: async () => {
     const res = await apiClient.get('/cases/active');
     return res.data;
@@ -117,6 +125,16 @@ export const dbService = {
     return res.data;
   },
 
+  // MARKETING
+  getMarketingSpend: async () => {
+    const res = await apiClient.get('/marketing/spend');
+    return res.data;
+  },
+  updateMarketingSpend: async (spendData) => {
+    const res = await apiClient.post('/marketing/spend', spendData);
+    return res.data;
+  },
+
   // SETTINGS & CUSTOMIZATION
   getCustomizationSettings: async () => {
     const res = await apiClient.get('/settings/customization');
@@ -133,7 +151,42 @@ export const dbService = {
     return res.data;
   },
   createAgent: async (agent) => {
-    const res = await apiClient.post('/users', agent);
+    const payload = {
+      fullName: agent.name,
+      email: agent.email,
+      password: agent.password,
+      hotlineNumber: agent.phone,
+      role: agent.role,
+      spokenLanguages: agent.languages,
+      nationalities: agent.nationalities,
+      commissionRate: agent.commissionRate,
+      immigrationBio: agent.bio,
+      customPermissions: agent.customPermissions
+    };
+    const res = await apiClient.post('/users', payload);
+    return res.data;
+  },
+  updateAgent: async (agent) => {
+    const payload = {
+      fullName: agent.name,
+      email: agent.email,
+      hotlineNumber: agent.phone,
+      role: agent.role,
+      spokenLanguages: agent.languages,
+      nationalities: agent.nationalities,
+      commissionRate: agent.commissionRate,
+      immigrationBio: agent.bio,
+      customPermissions: agent.customPermissions
+    };
+    const res = await apiClient.put(`/users/${agent.id}`, payload);
+    return res.data;
+  },
+  resetAgentPassword: async (id, newPassword) => {
+    const res = await apiClient.put(`/users/${id}/password`, { newPassword });
+    return res.data;
+  },
+  deleteAgent: async (id) => {
+    const res = await apiClient.delete(`/users/${id}`);
     return res.data;
   },
   getConsultants: async () => {
@@ -147,18 +200,82 @@ export const dbService = {
     const res = await apiClient.post('/auth/login', { email, password });
     return res.data;
   },
+  clientLogin: async (clientId, password) => {
+    const res = await apiClient.post('/clients/login', { clientId, password });
+    return res.data;
+  },
+  changeClientPassword: async (clientId, newPassword) => {
+    const res = await apiClient.put(`/clients/${clientId}/change-password`, { newPassword });
+    return res.data;
+  },
 
   // STUBS (To prevent UI crash where APIs are not yet built)
   getNotifications: async () => [],
   addNotification: async () => ({}),
   getConversations: async () => [],
-  getSettings: async () => ({}),
-  getServices: async () => [],
-  getPackages: async () => [],
-  getEmailTemplates: async () => [],
-  getWhatsappTemplates: async () => [],
-  getCommissionRates: async () => [],
-  getCommissionsReport: async () => [],
-  getRefundRequests: async () => [],
+  getSettings: async () => {
+    const res = await apiClient.get('/settings/company');
+    return res.data;
+  },
+  updateSettings: async (data) => {
+    const res = await apiClient.put('/settings/company', data);
+    return res.data;
+  },
+  getServices: async () => {
+    const res = await apiClient.get('/settings/services');
+    return res.data;
+  },
+  updateServices: async (data) => {
+    const res = await apiClient.put('/settings/services', data);
+    return res.data;
+  },
+  getPackages: async () => {
+    const res = await apiClient.get('/settings/packages');
+    return res.data;
+  },
+  updatePackages: async (data) => {
+    const res = await apiClient.put('/settings/packages', data);
+    return res.data;
+  },
+  getEmailTemplates: async () => {
+    const res = await apiClient.get('/settings/templates/email');
+    return res.data;
+  },
+  updateEmailTemplates: async (data) => {
+    const res = await apiClient.put('/settings/templates/email', data);
+    return res.data;
+  },
+  getWhatsappTemplates: async () => {
+    const res = await apiClient.get('/settings/templates/whatsapp');
+    return res.data;
+  },
+  updateWhatsappTemplates: async (data) => {
+    const res = await apiClient.put('/settings/templates/whatsapp', data);
+    return res.data;
+  },
+  getCommissionRates: async () => {
+    const res = await apiClient.get('/payments/commissions/rates');
+    return res.data;
+  },
+  getCommissionsReport: async () => {
+    const res = await apiClient.get('/payments/commissions/report');
+    return res.data;
+  },
+  updateCommissionRate: async (agentId, type, value) => {
+    const res = await apiClient.patch('/payments/commissions/rates', { agentId, type, value });
+    return res.data;
+  },
+  getRefundRequests: async () => {
+    const res = await apiClient.get('/payments/refunds');
+    return res.data;
+  },
+  createRefundRequest: async (data) => {
+    const res = await apiClient.post('/payments/refunds', data);
+    return res.data;
+  },
+  updateRefundStatus: async (refundId, status) => {
+    const res = await apiClient.patch(`/payments/refunds/${refundId}/status`, { status });
+    return res.data;
+  },
   getBackupLogs: async () => []
 };

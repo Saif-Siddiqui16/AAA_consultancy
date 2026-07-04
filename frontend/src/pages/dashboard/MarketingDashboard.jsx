@@ -25,27 +25,64 @@ export const MarketingDashboard = () => {
     queryFn: dbService.getCustomizationSettings
   });
 
+  const { data: leads = [] } = useQuery({ queryKey: ['leads'], queryFn: dbService.getLeads });
+  const { data: clients = [] } = useQuery({ queryKey: ['clients'], queryFn: dbService.getClients });
+  const { data: consultations = [] } = useQuery({ queryKey: ['consultations'], queryFn: dbService.getConsultations });
+
+  // Calculate dynamic source performance data
+  const sourceMap = {};
+  leads.forEach(l => {
+    const s = l.source || 'Unknown';
+    if (!sourceMap[s]) {
+      sourceMap[s] = { name: s, leads: 0, consultations: 0, clients: 0, value: 0 };
+    }
+    sourceMap[s].leads += 1;
+    sourceMap[s].value += 1;
+  });
+
+  consultations.forEach(c => {
+    // Find associated lead to get source
+    const lead = leads.find(l => l.id === c.leadId) || c.lead;
+    const s = lead?.source || 'Unknown';
+    if (!sourceMap[s]) {
+      sourceMap[s] = { name: s, leads: 0, consultations: 0, clients: 0, value: 0 };
+    }
+    sourceMap[s].consultations += 1;
+  });
+
+  clients.forEach(c => {
+    // Client might have source, or we find their lead
+    const lead = leads.find(l => l.id === c.leadId) || c.lead;
+    const s = c.source || lead?.source || 'Unknown';
+    if (!sourceMap[s]) {
+      sourceMap[s] = { name: s, leads: 0, consultations: 0, clients: 0, value: 0 };
+    }
+    sourceMap[s].clients += 1;
+  });
+
+  const sourcePerformanceData = Object.values(sourceMap).sort((a, b) => b.leads - a.leads);
+  
+  const leadSourceDistribution = sourcePerformanceData.map(item => ({
+    name: item.name,
+    value: item.leads
+  })).filter(item => item.value > 0);
+
+  const totalLeads = leads.length;
+  const totalConsultations = consultations.length;
+  const totalClients = clients.length;
+  const activeCampaigns = leadSourceDistribution.length; // Unique sources
+  const avgConversion = totalLeads > 0 ? ((totalClients / totalLeads) * 100).toFixed(1) : '0.0';
+
   // LEAD SOURCE PERFORMANCE STATS
   const marketingStats = [
-    { title: 'Total Leads Generated', value: '1,450', icon: <PeopleAltIcon />, color: '#3F51B5', trend: '12%' },
-    { title: 'Total Consultations Booked', value: '380', icon: <TrendingUpIcon />, color: '#14B8A6', trend: '5%' },
-    { title: 'Active Campaigns', value: '12', icon: <CampaignIcon />, color: '#F59E0B', trend: '2' },
-    { title: 'Avg Conversion Rate', value: '8.4%', icon: <AssessmentIcon />, color: '#8B5CF6', trend: '1.2%' },
-  ];
-
-  // LEAD SOURCE PERFORMANCE (Conversions per Source)
-  const sourcePerformanceData = [
-    { name: 'Facebook Ads', leads: 400, consultations: 120, clients: 40 },
-    { name: 'Google Ads', leads: 350, consultations: 150, clients: 60 },
-    { name: 'Instagram Ads', leads: 300, consultations: 80, clients: 20 },
-    { name: 'TikTok Ads', leads: 200, consultations: 50, clients: 10 },
-    { name: 'WhatsApp', leads: 150, consultations: 90, clients: 45 },
-    { name: 'Organic SEO', leads: 50, consultations: 20, clients: 10 },
+    { title: 'Total Leads Generated', value: totalLeads.toString(), icon: <PeopleAltIcon />, color: '#3F51B5', trend: '12%' },
+    { title: 'Total Consultations Booked', value: totalConsultations.toString(), icon: <TrendingUpIcon />, color: '#14B8A6', trend: '5%' },
+    { title: 'Active Campaigns', value: activeCampaigns.toString(), icon: <CampaignIcon />, color: '#F59E0B', trend: '2' },
+    { title: 'Avg Conversion Rate', value: `${avgConversion}%`, icon: <AssessmentIcon />, color: '#8B5CF6', trend: '1.2%' },
   ];
 
   const handleExportReport = () => {
     try {
-      // Create CSV content headers
       let csvContent = "data:text/csv;charset=utf-8,";
       csvContent += "Source Channel,Total Leads,Consultations Booked,Paid Clients,Acquisition Rate (%)\n";
 
@@ -54,7 +91,6 @@ export const MarketingDashboard = () => {
         csvContent += `"${row.name}",${row.leads},${row.consultations},${row.clients},${rate}%\n`;
       });
 
-      // Create download link
       const encodedUri = encodeURI(csvContent);
       const link = document.createElement("a");
       link.setAttribute("href", encodedUri);
@@ -69,16 +105,6 @@ export const MarketingDashboard = () => {
       showAlert("Failed to export marketing report", "error");
     }
   };
-
-  // LEAD SOURCE BREAKDOWN (PIE CHART)
-  const leadSourceDistribution = [
-    { name: 'Facebook Ads', value: 400 },
-    { name: 'Google Ads', value: 350 },
-    { name: 'Instagram Ads', value: 300 },
-    { name: 'TikTok Ads', value: 200 },
-    { name: 'WhatsApp', value: 150 },
-    { name: 'Organic SEO', value: 50 },
-  ];
 
   return (
     <Box>

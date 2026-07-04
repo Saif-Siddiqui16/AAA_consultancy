@@ -107,10 +107,12 @@ export const AllAgentsPerformance = () => {
     },
   ];
 
-  // Filter agents by search term
+  // Filter agents by search term and role
   const filteredAgents = agents.filter((agent) =>
-    agent.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    agent.email.toLowerCase().includes(searchTerm.toLowerCase())
+    agent.role === 'consultant' && (
+      agent.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      agent.email.toLowerCase().includes(searchTerm.toLowerCase())
+    )
   );
 
   return (

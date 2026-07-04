@@ -24,13 +24,15 @@ const getConsultations = async (req, res) => {
 
 const createConsultation = async (req, res) => {
   try {
-    const { leadId, date, timeSlot, notes } = req.body;
+    const { leadId, meetingDate, meetingTime, durationMinutes, assignedConsultantId, notes } = req.body;
     
     const consultation = await prisma.consultation.create({
       data: {
         leadId,
-        date,
-        timeSlot,
+        date: meetingDate,
+        timeSlot: meetingTime,
+        durationMinutes: durationMinutes || 30,
+        consultantId: assignedConsultantId,
         internalNotes: notes,
         meetingLink: 'https://zoom.us/j/' + Math.floor(100000000 + Math.random() * 900000000)
       }
@@ -38,6 +40,7 @@ const createConsultation = async (req, res) => {
 
     res.status(201).json(consultation);
   } catch (error) {
+    console.error('Error booking consultation:', error);
     res.status(500).json({ message: 'Server error booking consultation' });
   }
 };

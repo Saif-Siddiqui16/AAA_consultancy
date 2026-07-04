@@ -15,6 +15,7 @@ import FormControl from '@mui/material/FormControl';
 import Select from '@mui/material/Select';
 import MenuItem from '@mui/material/MenuItem';
 import { useAlert } from '../../contexts/AlertContext';
+import { dbService } from '../../services/dbService';
 
 const LOGIN_TRANSLATIONS = {
   English: {
@@ -109,22 +110,46 @@ export const ClientPortalLogin = () => {
     return LOGIN_TRANSLATIONS['English'][key] || key;
   };
 
-  const handleLogin = (e) => {
+  const handleLogin = async (e) => {
     e.preventDefault();
     if (!username || !password) {
       showAlert('Please enter both username and password.', 'error');
       return;
     }
     const clientId = username.trim();
-    showAlert('Login successful! Welcome to the Client Portal.', 'success');
-    navigate(`/portal/documents/${clientId}`);
+    try {
+      const res = await dbService.clientLogin(clientId, password);
+      localStorage.setItem('clientToken', res.token);
+      localStorage.setItem('clientData', JSON.stringify(res.client));
+      showAlert('Login successful! Welcome to the Client Portal.', 'success');
+      
+      if (res.client.isTemporaryPassword) {
+        navigate('/portal/change-password');
+      } else {
+        navigate(`/portal/documents/${clientId}`);
+      }
+    } catch (err) {
+      showAlert(err.response?.data?.message || 'Login failed. Invalid credentials.', 'error');
+    }
   };
 
-  const handleQuickLogin = (clientId) => {
+  const handleQuickLogin = async (clientId) => {
     setUsername(clientId);
     setPassword('password123');
-    showAlert('Login successful! Welcome to the Client Portal.', 'success');
-    navigate(`/portal/documents/${clientId}`);
+    try {
+      const res = await dbService.clientLogin(clientId, 'password123');
+      localStorage.setItem('clientToken', res.token);
+      localStorage.setItem('clientData', JSON.stringify(res.client));
+      showAlert('Login successful! Welcome to the Client Portal.', 'success');
+      
+      if (res.client.isTemporaryPassword) {
+        navigate('/portal/change-password');
+      } else {
+        navigate(`/portal/documents/${clientId}`);
+      }
+    } catch (err) {
+      showAlert(err.response?.data?.message || 'Quick login failed.', 'error');
+    }
   };
 
   const isRTL = loginLang === 'Arabic' || loginLang === 'Urdu';

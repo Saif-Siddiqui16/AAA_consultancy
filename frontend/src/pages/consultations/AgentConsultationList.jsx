@@ -157,13 +157,13 @@ export const AgentConsultationList = () => {
 
   const filteredConsultations = consultations.filter((cons) => {
     // ENFORCED agent privacy filter: Agents only see consultations assigned to them
-    if (cons.assignedConsultantId !== currentUser?.id) return false;
+    if (cons.consultantId !== currentUser?.id) return false;
 
     if (!filterByDate(cons.meetingDate, startDate, endDate)) return false;
 
     const nameMatch = cons.clientName.toLowerCase().includes(searchTerm.toLowerCase());
     const matchStatus = filters.status ? cons.status === filters.status : true;
-    const matchConsultant = filters.assignedConsultantId ? cons.assignedConsultantId === filters.assignedConsultantId : true;
+    const matchConsultant = filters.assignedConsultantId ? cons.consultantId === filters.assignedConsultantId : true;
     const matchService = filters.serviceId ? cons.serviceId === filters.serviceId : true;
     return nameMatch && matchStatus && matchConsultant && matchService;
   });
@@ -182,7 +182,7 @@ export const AgentConsultationList = () => {
       id: 'consultant',
       label: 'Assigned Agent',
       render: (row) => {
-        const c = consultantsList.find((cons) => cons.id === row.assignedConsultantId);
+        const c = consultantsList.find((consAgent) => consAgent.id === row.consultantId);
         return c ? c.name : 'Unknown';
       } },
     {

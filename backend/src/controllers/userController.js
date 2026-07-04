@@ -25,6 +25,9 @@ const getAgents = async (req, res) => {
     const mappedAgents = agents.map(a => ({
       ...a,
       name: a.fullName,
+      phone: a.hotlineNumber,
+      languages: a.spokenLanguages,
+      bio: a.immigrationBio,
       casesCount: 0,
       avatar: 'https://i.pravatar.cc/150?u=' + a.id
     }));
@@ -78,4 +81,60 @@ const createUser = async (req, res) => {
   }
 };
 
-module.exports = { getAgents, createUser };
+const updateUser = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const {
+      fullName, email, hotlineNumber, role,
+      spokenLanguages, nationalities, commissionRate, immigrationBio, customPermissions
+    } = req.body;
+
+    const user = await prisma.user.update({
+      where: { id },
+      data: {
+        fullName,
+        email,
+        hotlineNumber,
+        role,
+        spokenLanguages,
+        nationalities,
+        commissionRate: Number(commissionRate) || 0,
+        immigrationBio,
+        customPermissions
+      }
+    });
+    res.json(user);
+  } catch (error) {
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+const deleteUser = async (req, res) => {
+  try {
+    const { id } = req.params;
+    await prisma.user.delete({ where: { id } });
+    res.json({ message: 'User deleted' });
+  } catch (error) {
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+const resetUserPassword = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { newPassword } = req.body;
+    
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(newPassword, salt);
+
+    await prisma.user.update({
+      where: { id },
+      data: { password: hashedPassword }
+    });
+    res.json({ message: 'Password updated' });
+  } catch (error) {
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+module.exports = { getAgents, createUser, updateUser, deleteUser, resetUserPassword };

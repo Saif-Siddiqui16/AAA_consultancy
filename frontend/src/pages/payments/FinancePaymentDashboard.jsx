@@ -459,7 +459,7 @@ export const FinancePaymentDashboard = () => {
                   const totalFee = clientInvoices.reduce((acc, curr) => acc + curr.amount - (curr.discount || 0), 0);
                   const totalPaid = clientInvoices.filter(p => p.status === 'Paid').reduce((acc, curr) => acc + curr.totalPaid, 0);
                   const remaining = totalFee - totalPaid;
-                  const agentName = agents.find(a => a.id === c.assignedConsultantId)?.name || 'Unassigned';
+                  const agentName = agents.find(a => a.id === c.assignedToId)?.name || 'Unassigned';
 
                   return (
                     <TableRow key={c.id}>
