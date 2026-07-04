@@ -64,6 +64,8 @@ import OperationsSocialInbox from '../pages/social/OperationsSocialInbox';
 import AgentSocialInbox from '../pages/social/AgentSocialInbox';
 import ClientIntakeForm from '../pages/public/ClientIntakeForm';
 import LeadIntakeForm from '../pages/public/LeadIntakeForm';
+import EligibilityBookingForm from '../pages/public/EligibilityBookingForm';
+import SwornTranslationForm from '../pages/public/SwornTranslationForm';
 import ClientPortalLogin from '../pages/public/ClientPortalLogin';
 import ClientPortalChangePassword from '../pages/public/ClientPortalChangePassword';
 import ClientPortalDocs from '../pages/public/ClientPortalDocs';
@@ -292,6 +294,8 @@ export const AppRoutes = () => {
       {/* Public Secure Client Intake Portal (Unprotected) */}
       <Route path="/public/intake/client/:clientId" element={<ClientIntakeForm />} />
       <Route path="/public/intake" element={<LeadIntakeForm />} />
+      <Route path="/public/booking/eligibility" element={<EligibilityBookingForm />} />
+      <Route path="/public/translation" element={<SwornTranslationForm />} />
 
       {/* Client Portal (Protected via simple login or token in real app, keeping route structure) */}
       <Route path="/portal/login" element={<ClientPortalLogin />} />

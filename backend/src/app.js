@@ -25,6 +25,9 @@ app.use('/api/v1/consultations', require('./routes/consultationRoutes'));
 app.use('/api/v1/payments', require('./routes/paymentRoutes'));
 app.use('/api/v1/documents', require('./routes/documentRoutes'));
 app.use('/api/v1/marketing', require('./routes/marketingRoutes'));
+app.use('/api/v1/webhooks', require('./routes/webhookRoutes'));
+app.use('/api/v1/booking', require('./routes/bookingRoutes'));
+app.use('/api/v1/ai', require('./routes/aiRoutes'));
 
 // Start Server
 const PORT = process.env.PORT || 5000;
