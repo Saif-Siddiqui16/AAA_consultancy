@@ -107,6 +107,8 @@ const getMenuLabelForPath = (path) => {
   if (p.includes('/documents/storage')) return 'AWS Cloud Backups';
   if (p.includes('/payments/refund-commission')) return 'Refunds & Commissions';
   if (p.includes('/closed-cases')) return 'Closed Cases';
+  if (p.includes('/marketing-manager/leads')) return 'Leads';
+  if (p.includes('/marketing-manager/dashboard')) return 'Dashboard';
   if (p.includes('/clients')) return 'Clients';
   if (p.includes('/leads')) return 'Leads';
   if (p.includes('/social-inbox')) return 'Social Inbox';
