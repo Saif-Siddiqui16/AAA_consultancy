@@ -69,6 +69,7 @@ import ClientPortalChangePassword from '../pages/public/ClientPortalChangePasswo
 import ClientPortalDocs from '../pages/public/ClientPortalDocs';
 import AdminDocumentVerificationDashboard from '../pages/documents/AdminDocumentVerificationDashboard';
 import OperationsDocumentVerificationDashboard from '../pages/documents/OperationsDocumentVerificationDashboard';
+import LandingPage from '../pages/public/LandingPage';
 
 import Agents from '../pages/team/Agents';
 import ActiveCases from '../pages/team/ActiveCases';
@@ -282,6 +283,9 @@ const ClientPortalGuard = ({ children }) => {
 export const AppRoutes = () => {
   return (
     <Routes>
+      {/* Public Landing Page */}
+      <Route path="/" element={<LandingPage />} />
+
       {/* Auth Shell Layout */}
       <Route element={<AuthLayout />}>
         <Route path="/login" element={<Login />} />

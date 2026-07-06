@@ -82,32 +82,32 @@ export const AuthProvider = ({ children }) => {
   const changeRole = (role) => {
     let user = { 
       id: 'admin-1', 
-      name: 'General Manager', 
-      email: 'manager@aaabusinessconsultancy.com', 
+      name: 'Sarah Admin', 
+      email: 'admin@aaaconsultancy.com', 
       role: 'admin', 
       avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150' 
     };
     
     if (role === 'super_admin') {
-      user = { id: 'super-admin', name: 'Wael Madi (CEO)', email: 'wael.m@aaabusinessconsultancy.com', role: 'super_admin', avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150' };
+      user = { id: 'super-admin', name: 'John SuperAdmin', email: 'superadmin@aaaconsultancy.com', role: 'super_admin', avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150' };
     } else if (role === 'marketing') {
-      user = { id: 'marketing-staff', name: 'Marketing Manager', email: 'marketing@aaabusinessconsultancy.com', role: 'marketing', avatar: 'https://images.unsplash.com/photo-1573497019940-1c28c88b4f3e?w=150' };
+      user = { id: 'marketing-staff', name: 'Jessica Marketing', email: 'marketing@aaaconsultancy.com', role: 'marketing', avatar: 'https://images.unsplash.com/photo-1573497019940-1c28c88b4f3e?w=150' };
     } else if (role === 'consultant') {
       const saved = localStorage.getItem('crm-agents-list');
       const list = saved ? JSON.parse(saved) : AGENTS;
-      const c = list.find(a => a.id === 'c1' || a.role === 'consultant') || { id: 'c1', name: 'Sofia Rodriguez', email: 'sofia@example.com', avatar: '' };
+      const c = list.find(a => a.id === 'c1' || a.role === 'consultant') || { id: 'c1', name: 'David Consultant', email: 'agent@aaaconsultancy.com', avatar: '' };
       user = { 
         id: c.id, 
         name: c.name, 
-        email: c.email, 
+        email: c.email || 'agent@aaaconsultancy.com', 
         role: c.role || 'consultant', 
         avatar: c.avatar, 
         customPermissions: c.customPermissions 
       };
     } else if (role === 'finance') {
-      user = { id: 'finance-staff', name: 'Elena Finance', email: 'finance@aaabusinessconsultancy.com', role: 'finance', avatar: 'https://images.unsplash.com/photo-1580489944761-15a19d654956?w=150' };
+      user = { id: 'finance-staff', name: 'Emily Finance', email: 'finance@aaaconsultancy.com', role: 'finance', avatar: 'https://images.unsplash.com/photo-1580489944761-15a19d654956?w=150' };
     } else if (role === 'operations') {
-      user = { id: 'operations-staff', name: 'Carlos Ops', email: 'ops@aaabusinessconsultancy.com', role: 'operations', avatar: 'https://images.unsplash.com/photo-1560250097-0b93528c311a?w=150' };
+      user = { id: 'operations-staff', name: 'Mark Operations', email: 'operations@aaaconsultancy.com', role: 'operations', avatar: 'https://images.unsplash.com/photo-1560250097-0b93528c311a?w=150' };
     }
 
     localStorage.setItem('crm-auth-user', JSON.stringify(user));

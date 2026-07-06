@@ -58,8 +58,8 @@ export const PACKAGES = [
 export const AGENTS = [
   {
     id: 'c1',
-    name: 'Sofia Rodriguez',
-    email: 'sofia.r@aaabusinessconsultancy.com',
+    name: 'David Consultant',
+    email: 'agent@aaaconsultancy.com',
     password: 'password123',
     phone: '+971 50 123 4567',
     role: 'consultant',
@@ -74,8 +74,8 @@ export const AGENTS = [
   },
   {
     id: 'c2',
-    name: 'Lucas Gomez',
-    email: 'lucas.g@aaabusinessconsultancy.com',
+    name: 'Mark Operations',
+    email: 'operations@aaaconsultancy.com',
     password: 'password123',
     phone: '+971 50 987 6543',
     role: 'operations',
@@ -90,8 +90,8 @@ export const AGENTS = [
   },
   {
     id: 'c3',
-    name: 'Amir Hassan',
-    email: 'amir.h@aaabusinessconsultancy.com',
+    name: 'Sarah Admin',
+    email: 'admin@aaaconsultancy.com',
     password: 'password123',
     phone: '+971 50 955 4142',
     role: 'admin',
@@ -106,8 +106,8 @@ export const AGENTS = [
   },
   {
     id: 'c4',
-    name: 'Elena Rostova',
-    email: 'elena.r@aaabusinessconsultancy.com',
+    name: 'Jessica Marketing',
+    email: 'marketing@aaaconsultancy.com',
     password: 'password123',
     phone: '+971 50 555 7788',
     role: 'marketing',
@@ -121,8 +121,8 @@ export const AGENTS = [
   },
   {
     id: 'c5',
-    name: 'David Vance',
-    email: 'david.v@aaabusinessconsultancy.com',
+    name: 'Emily Finance',
+    email: 'finance@aaaconsultancy.com',
     password: 'password123',
     phone: '+971 50 333 4455',
     role: 'finance',

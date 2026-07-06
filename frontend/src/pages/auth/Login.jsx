@@ -36,11 +36,16 @@ export const Login = () => {
   const {
     register,
     handleSubmit,
+    setValue,
+    watch,
     formState: { errors, isSubmitting } } = useForm({
     resolver: yupResolver(schema),
     defaultValues: {
       email: '',
       password: '' } });
+
+  const emailValue = watch('email');
+  const passwordValue = watch('password');
 
   const onSubmit = async (data) => {
     try {
@@ -54,54 +59,75 @@ export const Login = () => {
     }
   };
 
-  const handleQuickLogin = (role) => {
+  const handleQuickLogin = async (role) => {
+    let email = 'admin@aaaconsultancy.com';
     let mockUser = {
       id: 'admin-1',
-      name: 'General Manager',
-      email: 'manager@aaabusinessconsultancy.com',
+      name: 'Sarah Admin',
+      email: 'admin@aaaconsultancy.com',
       role: 'admin',
       avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150' };
 
     if (role === 'consultant') {
+      email = 'agent@aaaconsultancy.com';
       mockUser = {
         id: 'c1',
-        name: 'Sofia Rodriguez',
-        email: 'sofia.r@aaabusinessconsultancy.com',
+        name: 'David Consultant',
+        email: 'agent@aaaconsultancy.com',
         role: 'consultant',
         avatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=150' };
     } else if (role === 'finance') {
+      email = 'finance@aaaconsultancy.com';
       mockUser = {
         id: 'finance-staff',
-        name: 'Elena Finance',
-        email: 'finance@aaabusinessconsultancy.com',
+        name: 'Emily Finance',
+        email: 'finance@aaaconsultancy.com',
         role: 'finance',
         avatar: 'https://images.unsplash.com/photo-1580489944761-15a19d654956?w=150' };
     } else if (role === 'operations') {
+      email = 'operations@aaaconsultancy.com';
       mockUser = {
         id: 'operations-staff',
-        name: 'Carlos Ops',
-        email: 'ops@aaabusinessconsultancy.com',
+        name: 'Mark Operations',
+        email: 'operations@aaaconsultancy.com',
         role: 'operations',
         avatar: 'https://images.unsplash.com/photo-1560250097-0b93528c311a?w=150' };
     } else if (role === 'super_admin') {
+      email = 'superadmin@aaaconsultancy.com';
       mockUser = {
         id: 'super-admin',
-        name: 'Wael Madi (CEO)',
-        email: 'wael.m@aaabusinessconsultancy.com',
+        name: 'John SuperAdmin',
+        email: 'superadmin@aaaconsultancy.com',
         role: 'super_admin',
         avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150' };
     } else if (role === 'marketing') {
+      email = 'marketing@aaaconsultancy.com';
       mockUser = {
         id: 'marketing-staff',
-        name: 'Marketing Manager',
-        email: 'marketing@aaabusinessconsultancy.com',
+        name: 'Jessica Marketing',
+        email: 'marketing@aaaconsultancy.com',
         role: 'marketing',
         avatar: 'https://images.unsplash.com/photo-1573497019940-1c28c88b4f3e?w=150' };
     }
 
-    login(mockUser);
-    showAlert(`Logged in as Demo ${role.toUpperCase()}`, 'success');
-    navigate('/dashboard');
+    // Auto-fill the credentials in the input fields
+    setValue('email', email, { shouldValidate: true });
+    setValue('password', 'password123', { shouldValidate: true });
+
+    // Tiny delay so the user can visually see the values populated
+    await new Promise((resolve) => setTimeout(resolve, 250));
+
+    try {
+      const res = await dbService.authLogin(email, 'password123');
+      login(res.user, res.token);
+      showAlert(`Logged in successfully as ${res.user.role}`, 'success');
+      navigate('/dashboard');
+    } catch (error) {
+      console.warn("Backend quick login failed, using local mock fallback:", error);
+      login(mockUser);
+      showAlert(`Logged in as Demo ${role.toUpperCase()} (Mock)`, 'warning');
+      navigate('/dashboard');
+    }
   };
 
   return (
@@ -119,6 +145,8 @@ export const Login = () => {
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2.5 }}>
           <TextField
             {...register('email')}
+            value={emailValue}
+            onChange={(e) => setValue('email', e.target.value, { shouldValidate: true })}
             label="Email Address"
             variant="outlined"
             fullWidth
@@ -128,6 +156,8 @@ export const Login = () => {
 
           <TextField
             {...register('password')}
+            value={passwordValue}
+            onChange={(e) => setValue('password', e.target.value, { shouldValidate: true })}
             label="Password"
             type="password"
             variant="outlined"

@@ -89,60 +89,8 @@ export const SuperAdminDashboard = () => {
     }
   };
 
-  // REVENUE DASHBOARD
-  const revenueStats = [
-    { title: 'Total Revenue', value: '€2,450,000', icon: <AccountBalanceWalletIcon />, color: '#3F51B5', trend: '15%' },
-    { title: 'Revenue Today', value: '€12,500', icon: <TrendingUpIcon />, color: '#14B8A6', trend: '8%' },
-    { title: 'Outstanding Revenue', value: '€145,000', icon: <AccountBalanceWalletIcon />, color: '#F59E0B', trend: '-2%' },
-    { title: 'Refunded (50% Rejections)', value: '€45,000', icon: <CancelIcon />, color: '#EF4444', trend: '4%' },
-  ];
 
-  // LEAD SOURCE REVENUE TRACKING
-  const leadSourceData = [
-    { name: 'Google Ads', value: 400 },
-    { name: 'WhatsApp', value: 300 },
-    { name: 'Instagram Ads', value: 300 },
-    { name: 'Referrals', value: 200 },
-    { name: 'Website SEO', value: 100 },
-  ];
 
-  // COMMISSION MANAGEMENT
-  const commissionData = [
-    { name: 'Sofia (10%)', earned: 15000, paid: 12000 },
-    { name: 'Carlos (5%)', earned: 8000, paid: 8000 },
-    { name: 'Elena (Custom)', earned: 20000, paid: 15000 },
-    { name: 'Marcus (10%)', earned: 18000, paid: 10000 },
-  ];
-
-  // PAYMENT STATUS & GATEWAYS
-  const gatewayData = [
-    { name: 'Stripe', revenue: 150000 },
-    { name: 'Apple Pay', revenue: 85000 },
-    { name: 'Tabby (Installments)', revenue: 45000 },
-    { name: 'Bank Transfer', revenue: 120000 },
-  ];
-
-  // CLIENT FINANCIAL VIEW TABLE
-  const financialColumns = [
-    { id: 'client', label: 'Client Name' },
-    { id: 'service', label: 'Service Type' },
-    { id: 'consultant', label: 'Consultant' },
-    { id: 'totalFee', label: 'Total Fee' },
-    { id: 'paid', label: 'Paid Amount' },
-    { id: 'balance', label: 'Balance' },
-    { id: 'paymentStatus', label: 'Payment Status' },
-  ];
-
-  const financialRows = [
-    { id: 1, client: 'John Doe', service: 'Spain DNV', consultant: 'Sofia R.', totalFee: '€8,000', paid: '€4,000', balance: '€4,000', paymentStatus: 'Partially Paid' },
-    { id: 2, client: 'Sarah Smith', service: 'Golden Visa', consultant: 'Marcus T.', totalFee: '€12,000', paid: '€12,000', balance: '€0', paymentStatus: 'Fully Paid' },
-    { id: 3, client: 'Ahmed Ali', service: 'Non-Lucrative', consultant: 'Carlos O.', totalFee: '€5,000', paid: '€0', balance: '€5,000', paymentStatus: 'Pending Payment' },
-    { id: 4, client: 'Emily Chen', service: 'Student Visa', consultant: 'Sofia R.', totalFee: '€3,000', paid: '€1,500', balance: '€1,500', paymentStatus: 'Refunded (50%)' },
-    { id: 5, client: 'Michael Brown', service: 'Spain DNV', consultant: 'Elena S.', totalFee: '€9,500', paid: '€9,500', balance: '€0', paymentStatus: 'Fully Paid' },
-    { id: 6, client: 'Sophia Garcia', service: 'Golden Visa', consultant: 'Marcus T.', totalFee: '€15,000', paid: '€5,000', balance: '€10,000', paymentStatus: 'Partially Paid' },
-    { id: 7, client: 'David Wilson', service: 'Non-Lucrative', consultant: 'Carlos O.', totalFee: '€6,000', paid: '€6,000', balance: '€0', paymentStatus: 'Fully Paid' },
-    { id: 8, client: 'Emma Watson', service: 'Student Visa', consultant: 'Sofia R.', totalFee: '€4,000', paid: '€2,000', balance: '€2,000', paymentStatus: 'Partially Paid' },
-  ];
 
 
   // Lead Ingestion Simulator State
@@ -221,6 +169,116 @@ export const SuperAdminDashboard = () => {
   const { data: payments = [] } = useQuery({ queryKey: ['payments'], queryFn: dbService.getPayments });
   const { data: notifications = [] } = useQuery({ queryKey: ['notifications'], queryFn: dbService.getNotifications });
   const { data: agentsList = [] } = useQuery({ queryKey: ['agents'], queryFn: dbService.getAgents });
+
+  // REVENUE DASHBOARD
+  const totalRevenueVal = payments.filter(p => p.status === 'Paid').reduce((sum, p) => sum + (p.totalPaid || 0), 0);
+  const revenueTodayVal = payments.filter(p => p.status === 'Paid' && (p.paymentDate || '').startsWith(mockToday)).reduce((sum, p) => sum + (p.totalPaid || 0), 0);
+  const outstandingRevenueVal = payments.filter(p => p.status === 'Pending').reduce((sum, p) => sum + (p.amount || 0), 0);
+  const refundedVal = payments.filter(p => p.status === 'Refunded' || p.status === 'Refunded (50%)').reduce((sum, p) => sum + (p.amount || 0), 0);
+
+  const revenueStats = [
+    { title: 'Total Revenue', value: `€${totalRevenueVal.toLocaleString()}`, icon: <AccountBalanceWalletIcon />, color: '#3F51B5', trend: '0%' },
+    { title: 'Revenue Today', value: `€${revenueTodayVal.toLocaleString()}`, icon: <TrendingUpIcon />, color: '#14B8A6', trend: '0%' },
+    { title: 'Outstanding Revenue', value: `€${outstandingRevenueVal.toLocaleString()}`, icon: <AccountBalanceWalletIcon />, color: '#F59E0B', trend: '0%' },
+    { title: 'Refunded (50% Rejections)', value: `€${refundedVal.toLocaleString()}`, icon: <CancelIcon />, color: '#EF4444', trend: '0%' },
+  ];
+
+  // LEAD SOURCE REVENUE TRACKING
+  const leadSourceRaw = leads.reduce((acc, curr) => {
+    const clientForLead = clients.find(c => c.id === curr.clientId);
+    if (clientForLead) {
+      const clientPayments = payments.filter(p => p.clientId === clientForLead.id && p.status === 'Paid');
+      const revenue = clientPayments.reduce((sum, p) => sum + (p.totalPaid || 0), 0);
+      const sourceName = curr.source || 'Direct';
+      const existing = acc.find(item => item.name === sourceName);
+      if (existing) {
+        existing.value += revenue;
+      } else {
+        acc.push({ name: sourceName, value: revenue });
+      }
+    }
+    return acc;
+  }, []);
+
+  const leadSourceData = leadSourceRaw.length > 0 ? leadSourceRaw : [
+    { name: 'Google Ads', value: 0 },
+    { name: 'WhatsApp', value: 0 },
+    { name: 'Instagram Ads', value: 0 },
+    { name: 'Referrals', value: 0 },
+    { name: 'Website SEO', value: 0 },
+  ];
+
+  // COMMISSION MANAGEMENT
+  const commissionData = agentsList.map(agent => {
+    const agentClients = clients.filter(c => c.assignedToId === agent.id);
+    const agentPayments = payments.filter(p => p.status === 'Paid' && agentClients.some(c => c.id === p.clientId));
+    const revenue = agentPayments.reduce((sum, p) => sum + (p.totalPaid || 0), 0);
+    const earned = revenue * ((agent.commissionRate || 0) / 100);
+    return {
+      name: agent.name.split(' ')[0],
+      earned: Math.round(earned),
+      paid: Math.round(agent.commissionPaid || 0)
+    };
+  });
+
+  // PAYMENT STATUS & GATEWAYS
+  const gatewayDataRaw = payments
+    .filter(p => p.status === 'Paid')
+    .reduce((acc, p) => {
+      const method = p.paymentMethod || 'Stripe';
+      const existing = acc.find(item => item.name === method);
+      if (existing) {
+        existing.revenue += p.totalPaid;
+      } else {
+        acc.push({ name: method, revenue: p.totalPaid });
+      }
+      return acc;
+    }, []);
+
+  const gatewayData = gatewayDataRaw.length > 0 ? gatewayDataRaw : [
+    { name: 'Stripe', revenue: 0 },
+    { name: 'Apple Pay', revenue: 0 },
+    { name: 'Tabby', revenue: 0 },
+    { name: 'Bank Transfer', revenue: 0 },
+  ];
+
+  // CLIENT FINANCIAL VIEW TABLE
+  const financialColumns = [
+    { id: 'client', label: 'Client Name' },
+    { id: 'service', label: 'Service Type' },
+    { id: 'consultant', label: 'Consultant' },
+    { id: 'totalFee', label: 'Total Fee' },
+    { id: 'paid', label: 'Paid Amount' },
+    { id: 'balance', label: 'Balance' },
+    { id: 'paymentStatus', label: 'Payment Status' },
+  ];
+
+  const financialRows = clients.map((c) => {
+    const clientPayments = payments.filter(p => p.clientId === c.id);
+    const totalFee = clientPayments.reduce((sum, p) => sum + (p.amount || 0), 0);
+    const paidAmount = clientPayments.filter(p => p.status === 'Paid').reduce((sum, p) => sum + (p.totalPaid || p.amount || 0), 0);
+    const balance = totalFee - paidAmount;
+    
+    let paymentStatus = 'Pending Payment';
+    if (clientPayments.length > 0) {
+      if (clientPayments.every(p => p.status === 'Paid')) {
+        paymentStatus = 'Fully Paid';
+      } else if (clientPayments.some(p => p.status === 'Paid')) {
+        paymentStatus = 'Partially Paid';
+      }
+    }
+    
+    return {
+      id: c.id,
+      client: `${c.firstName} ${c.lastName}`,
+      service: SERVICES.find(s => s.id === c.serviceType)?.name || c.serviceType || 'Not Assigned',
+      consultant: c.assignedConsultantName || 'Not Assigned',
+      totalFee: `€${totalFee.toLocaleString()}`,
+      paid: `€${paidAmount.toLocaleString()}`,
+      balance: `€${balance.toLocaleString()}`,
+      paymentStatus
+    };
+  });
 
   // Dynamic Date Range Calculation
   const parseDate = (dateStr) => {

@@ -14,6 +14,7 @@ const getLeads = async (req, res) => {
     const mapped = leads.map(l => ({
       ...l,
       name: `${l.firstName} ${l.lastName}`,
+      serviceId: l.serviceType,
       assignedConsultantId: l.assignedToId,
       assignedConsultantName: l.assignedTo?.fullName
     }));
@@ -25,7 +26,19 @@ const getLeads = async (req, res) => {
 
 const createLead = async (req, res) => {
   try {
-    const { firstName, lastName, email, phone, source, campaignId, serviceType } = req.body;
+    const { 
+      firstName, 
+      lastName, 
+      email, 
+      phone, 
+      source, 
+      campaignId, 
+      serviceType, 
+      serviceId, 
+      nationality, 
+      preferredLanguage, 
+      applicantsCount 
+    } = req.body;
     
     // Simple auto-assign logic: assign to first available consultant
     const consultants = await prisma.user.findMany({ where: { role: 'consultant' } });
@@ -39,7 +52,10 @@ const createLead = async (req, res) => {
         phone,
         source,
         campaignId,
-        serviceType,
+        serviceType: serviceType || serviceId,
+        nationality,
+        preferredLanguage,
+        applicantsCount: applicantsCount ? String(applicantsCount) : undefined,
         assignedToId
       }
     });

@@ -14,7 +14,9 @@ const getClients = async (req, res) => {
     const mapped = clients.map(c => ({
       ...c,
       name: `${c.firstName} ${c.lastName}`,
-      assignedConsultantName: c.assignedTo?.fullName
+      serviceId: c.serviceType,
+      assignedConsultantName: c.assignedTo?.fullName,
+      assignedConsultantId: c.assignedToId
     }));
     
     res.json(mapped);
@@ -25,7 +27,7 @@ const getClients = async (req, res) => {
 
 const createClient = async (req, res) => {
   try {
-    const { firstName, lastName, email, phone, nationality, serviceType, assignedToId } = req.body;
+    const { firstName, lastName, email, phone, nationality, serviceType, serviceId, assignedToId } = req.body;
     
     const client = await prisma.client.create({
       data: {
@@ -34,7 +36,7 @@ const createClient = async (req, res) => {
         email,
         phone,
         nationality,
-        serviceType,
+        serviceType: serviceType || serviceId,
         assignedToId
       }
     });

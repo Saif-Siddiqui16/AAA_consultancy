@@ -27,6 +27,9 @@ import Dialog from '@mui/material/Dialog';
 import DialogTitle from '@mui/material/DialogTitle';
 import DialogContent from '@mui/material/DialogContent';
 import DialogActions from '@mui/material/DialogActions';
+import List from '@mui/material/List';
+import ListItem from '@mui/material/ListItem';
+import ListItemText from '@mui/material/ListItemText';
 
 // Icons
 import AddIcon from '@mui/icons-material/Add';
@@ -94,6 +97,54 @@ const PRESET_COLORS = [
   { value: '#9E9E9E', name: 'Gray' }
 ];
 
+const DEFAULT_PLANS = [
+  {
+    id: 'starter',
+    name: 'Starter License',
+    price: 99,
+    billingPeriod: '/ month',
+    description: 'For independent relocation agents.',
+    features: [
+      '3 Active Agents',
+      '50 Active Cases / Leads',
+      'Standard client intake portal',
+      '❌ Cloud AWS back-ups',
+      '❌ Verification dashboard'
+    ],
+    isRecommended: false
+  },
+  {
+    id: 'growth',
+    name: 'Growth License',
+    price: 249,
+    billingPeriod: '/ month',
+    description: 'For growing immigration teams.',
+    features: [
+      '10 Active Agents',
+      '200 Active Cases / Leads',
+      'Intake Forms & Document verification',
+      'AWS Secure Backups dashboard',
+      'Team permissions manager'
+    ],
+    isRecommended: true
+  },
+  {
+    id: 'enterprise',
+    name: 'Enterprise License',
+    price: 499,
+    billingPeriod: '/ month',
+    description: 'For agency franchises.',
+    features: [
+      'Unlimited Agents',
+      'Unlimited Cases',
+      'Custom branding & subdomain',
+      'Custom API Integrations',
+      'Priority SLA Support'
+    ],
+    isRecommended: false
+  }
+];
+
 export const SuperAdminCustomization = () => {
   const queryClient = useQueryClient();
   const { showAlert } = useAlert();
@@ -110,6 +161,23 @@ export const SuperAdminCustomization = () => {
   const [stageDialogOpen, setStageDialogOpen] = useState(false);
   const [editingStage, setEditingStage] = useState(null); // null means adding new
   const [stageForm, setStageForm] = useState({ name: '', emoji: '🆕', color: '#2196F3', type: 'lead' });
+
+  // Local state for SaaS CRM Plans
+  const [plans, setPlans] = useState(() => {
+    const saved = localStorage.getItem('saas_plans');
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (e) {
+        console.error(e);
+      }
+    }
+    return DEFAULT_PLANS;
+  });
+  const [planDialogOpen, setPlanDialogOpen] = useState(false);
+  const [editingPlan, setEditingPlan] = useState(null); // null means adding new
+  const [planForm, setPlanForm] = useState({ name: '', price: '', billingPeriod: '/ month', description: '', features: [], isRecommended: false });
+  const [newFeature, setNewFeature] = useState('');
 
   // Fetch customization settings
   const { data: customizationSettings, isLoading: isCustomizationLoading } = useQuery({
@@ -294,6 +362,77 @@ export const SuperAdminCustomization = () => {
     }
   };
 
+  const handleSavePlans = (updatedPlans) => {
+    setPlans(updatedPlans);
+    localStorage.setItem('saas_plans', JSON.stringify(updatedPlans));
+    showAlert('SaaS CRM plans updated in real-time!', 'success');
+  };
+
+  const handleOpenAddPlan = () => {
+    setEditingPlan(null);
+    setPlanForm({ name: '', price: '', billingPeriod: '/ month', description: '', features: [], isRecommended: false });
+    setNewFeature('');
+    setPlanDialogOpen(true);
+  };
+
+  const handleOpenEditPlan = (plan) => {
+    setEditingPlan(plan.id);
+    setPlanForm({ ...plan });
+    setNewFeature('');
+    setPlanDialogOpen(true);
+  };
+
+  const handleSavePlanForm = () => {
+    if (!planForm.name || planForm.price === '') {
+      showAlert('Please enter plan name and price', 'error');
+      return;
+    }
+    let updated;
+    if (editingPlan) {
+      updated = plans.map(p => p.id === editingPlan ? { ...planForm, price: parseFloat(planForm.price) || 0 } : p);
+    } else {
+      const newPlan = {
+        ...planForm,
+        id: 'plan_' + Math.random().toString(36).substring(2, 9),
+        price: parseFloat(planForm.price) || 0
+      };
+      updated = [...plans, newPlan];
+    }
+    handleSavePlans(updated);
+    setPlanDialogOpen(false);
+  };
+
+  const handleDeletePlan = (id) => {
+    if (window.confirm('Are you sure you want to delete this pricing plan?')) {
+      const updated = plans.filter(p => p.id !== id);
+      handleSavePlans(updated);
+    }
+  };
+
+  const handleResetPlans = () => {
+    if (window.confirm('Are you sure you want to reset all plans to factory defaults?')) {
+      localStorage.removeItem('saas_plans');
+      setPlans(DEFAULT_PLANS);
+      showAlert('Restored default pricing plans!', 'success');
+    }
+  };
+
+  const handleAddFeature = () => {
+    if (!newFeature.trim()) return;
+    setPlanForm(prev => ({
+      ...prev,
+      features: [...(prev.features || []), newFeature.trim()]
+    }));
+    setNewFeature('');
+  };
+
+  const handleRemoveFeature = (idx) => {
+    setPlanForm(prev => ({
+      ...prev,
+      features: (prev.features || []).filter((_, i) => i !== idx)
+    }));
+  };
+
   if (isCustomizationLoading || !localSettings || isStagesLoading) {
     return (
       <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '60vh' }}>
@@ -324,6 +463,7 @@ export const SuperAdminCustomization = () => {
           >
             <Tab label="👤 Role Permissions" sx={{ fontWeight: 800, px: 3, py: 2 }} />
             <Tab label="⚡ Lifecycle Stages Manager" sx={{ fontWeight: 800, px: 3, py: 2 }} />
+            <Tab label="💳 SaaS Plans Manager" sx={{ fontWeight: 800, px: 3, py: 2 }} />
           </Tabs>
         </Paper>
       </Box>
@@ -629,7 +769,125 @@ export const SuperAdminCustomization = () => {
         </Box>
       )}
 
-      {/* ─── Add / Edit Stage Dialog ─── */}
+      {/* ─── TAB 2: SaaS Plans Manager ─── */}
+      {topTab === 2 && (
+        <Box>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 3 }}>
+            <Typography variant="body2" color="text.secondary" sx={{ alignSelf: 'center' }}>
+              Manage CRM SaaS pricing plans displayed on the public Landing Page. Updates reflect instantly.
+            </Typography>
+            <Box sx={{ display: 'flex', gap: 2 }}>
+              <Button
+                variant="outlined"
+                color="inherit"
+                startIcon={<RestartAltIcon />}
+                onClick={handleResetPlans}
+                sx={{ fontWeight: 700 }}
+              >
+                Reset to Defaults
+              </Button>
+              <Button
+                variant="contained"
+                color="secondary"
+                startIcon={<AddIcon />}
+                onClick={handleOpenAddPlan}
+                sx={{ fontWeight: 700 }}
+              >
+                Add Plan
+              </Button>
+            </Box>
+          </Box>
+
+          <Box className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {plans.map((plan) => (
+              <Paper
+                key={plan.id}
+                sx={{
+                  p: 3.5,
+                  borderRadius: 3,
+                  border: plan.isRecommended ? '2.5px solid #D4AF37' : '1px solid',
+                  borderColor: plan.isRecommended ? '#D4AF37' : 'divider',
+                  position: 'relative',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  justifyContent: 'space-between',
+                  minHeight: '340px',
+                  boxShadow: 'none',
+                  '&:hover': {
+                    boxShadow: '0 4px 15px rgba(0,0,0,0.05)'
+                  }
+                }}
+              >
+                {plan.isRecommended && (
+                  <Chip
+                    label="RECOMMENDED"
+                    size="small"
+                    color="warning"
+                    sx={{
+                      position: 'absolute',
+                      top: 0,
+                      right: 16,
+                      transform: 'translateY(-50%)',
+                      fontWeight: 800,
+                      fontSize: '0.65rem'
+                    }}
+                  />
+                )}
+
+                <Box sx={{ flexGrow: 1 }}>
+                  <Typography variant="subtitle1" sx={{ fontWeight: 800, color: '#00205B', mb: 0.5 }}>
+                    {plan.name}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary" sx={{ minHeight: '36px', fontSize: '0.78rem', mb: 2 }}>
+                    {plan.description || 'No description provided.'}
+                  </Typography>
+                  <Divider sx={{ my: 1.5 }} />
+                  <Box sx={{ display: 'flex', alignItems: 'baseline', mb: 2 }}>
+                    <Typography variant="h5" sx={{ fontWeight: 800, color: '#00205B' }}>
+                      €{plan.price}
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary" sx={{ ml: 0.5, fontWeight: 600 }}>
+                      {plan.billingPeriod}
+                    </Typography>
+                  </Box>
+
+                  <Typography variant="caption" sx={{ fontWeight: 800, color: 'text.secondary', display: 'block', mb: 1, textTransform: 'uppercase' }}>
+                    Plan Features:
+                  </Typography>
+                  <Box component="ul" sx={{ pl: 2, m: 0, fontSize: '0.8rem', color: 'text.secondary', listStyleType: 'disc' }}>
+                    {(plan.features || []).map((feature, fIdx) => (
+                      <li key={fIdx} style={{ marginBottom: '2px' }}>{feature}</li>
+                    ))}
+                  </Box>
+                </Box>
+
+                <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1, mt: 3, pt: 1.5, borderTop: '1px solid', borderColor: 'divider' }}>
+                  <Button
+                    size="small"
+                    variant="outlined"
+                    color="primary"
+                    startIcon={<EditIcon sx={{ fontSize: '0.8rem' }} />}
+                    onClick={() => handleOpenEditPlan(plan)}
+                    sx={{ fontWeight: 700, fontSize: '0.7rem' }}
+                  >
+                    Edit
+                  </Button>
+                  <Button
+                    size="small"
+                    variant="outlined"
+                    color="error"
+                    startIcon={<DeleteIcon sx={{ fontSize: '0.8rem' }} />}
+                    onClick={() => handleDeletePlan(plan.id)}
+                    sx={{ fontWeight: 700, fontSize: '0.7rem' }}
+                  >
+                    Delete
+                  </Button>
+                </Box>
+              </Paper>
+            ))}
+          </Box>
+        </Box>
+      )}
       <Dialog open={stageDialogOpen} onClose={() => setStageDialogOpen(false)} maxWidth="xs" fullWidth PaperProps={{ sx: { borderRadius: 3 } }}>
         <DialogTitle sx={{ fontWeight: 800 }}>
           {editingStage ? '✏️ Edit Lifecycle Stage' : '➕ Add Custom Stage'}
@@ -710,6 +968,129 @@ export const SuperAdminCustomization = () => {
           </Button>
           <Button onClick={handleSaveStage} variant="contained" color="secondary" sx={{ fontWeight: 700 }}>
             Save Stage
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* ─── Add / Edit SaaS Plan Dialog ─── */}
+      <Dialog open={planDialogOpen} onClose={() => setPlanDialogOpen(false)} maxWidth="sm" fullWidth PaperProps={{ sx: { borderRadius: 3 } }}>
+        <DialogTitle sx={{ fontWeight: 800 }}>
+          {editingPlan ? '✏️ Edit SaaS License Plan' : '➕ Add SaaS License Plan'}
+        </DialogTitle>
+        <Divider />
+        <DialogContent sx={{ display: 'flex', flexDirection: 'column', gap: 2.5, pt: 3 }}>
+          <Box className="grid grid-cols-12 gap-3">
+            <Box className="col-span-8">
+              <TextField
+                label="Plan Name"
+                size="small"
+                fullWidth
+                value={planForm.name}
+                onChange={(e) => setPlanForm(prev => ({ ...prev, name: e.target.value }))}
+                placeholder="e.g. Pro License, Starter Plan"
+              />
+            </Box>
+            <Box className="col-span-4">
+              <FormControlLabel
+                control={
+                  <Switch
+                    checked={planForm.isRecommended}
+                    onChange={(e) => setPlanForm(prev => ({ ...prev, isRecommended: e.target.checked }))}
+                    color="warning"
+                  />
+                }
+                label={<Typography sx={{ fontSize: '0.78rem', fontWeight: 700 }}>Recommended</Typography>}
+                sx={{ mt: 0.5 }}
+              />
+            </Box>
+          </Box>
+
+          <Box className="grid grid-cols-12 gap-3">
+            <Box className="col-span-6">
+              <TextField
+                label="Price (€)"
+                type="number"
+                size="small"
+                fullWidth
+                value={planForm.price}
+                onChange={(e) => setPlanForm(prev => ({ ...prev, price: e.target.value }))}
+                placeholder="e.g. 199"
+              />
+            </Box>
+            <Box className="col-span-6">
+              <TextField
+                label="Billing Period"
+                size="small"
+                fullWidth
+                value={planForm.billingPeriod}
+                onChange={(e) => setPlanForm(prev => ({ ...prev, billingPeriod: e.target.value }))}
+                placeholder="e.g. / month, / year"
+              />
+            </Box>
+          </Box>
+
+          <TextField
+            label="Plan Description"
+            size="small"
+            fullWidth
+            multiline
+            rows={2}
+            value={planForm.description}
+            onChange={(e) => setPlanForm(prev => ({ ...prev, description: e.target.value }))}
+            placeholder="Brief tagline or description of the target audience..."
+          />
+
+          <Box sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 2, p: 2 }}>
+            <Typography variant="subtitle2" sx={{ fontWeight: 800, mb: 1.5, color: '#00205B' }}>
+              Bullet Features List
+            </Typography>
+            
+            <Box sx={{ display: 'flex', gap: 1, mb: 2 }}>
+              <TextField
+                label="Add Plan Feature"
+                size="small"
+                fullWidth
+                value={newFeature}
+                onChange={(e) => setNewFeature(e.target.value)}
+                placeholder="e.g. 10 Active Agents, Unlimited Cases"
+                onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleAddFeature(); } }}
+              />
+              <Button
+                variant="contained"
+                color="secondary"
+                onClick={handleAddFeature}
+                sx={{ fontWeight: 700, minWidth: 80 }}
+              >
+                Add
+              </Button>
+            </Box>
+
+            <List size="small" sx={{ p: 0, m: 0 }}>
+              {(planForm.features || []).map((feature, index) => (
+                <ListItem
+                  key={index}
+                  secondaryAction={
+                    <IconButton edge="end" size="small" color="error" onClick={() => handleRemoveFeature(index)}>
+                      <DeleteIcon sx={{ fontSize: '1rem' }} />
+                    </IconButton>
+                  }
+                  sx={{ py: 0.5, px: 1, borderBottom: '1px solid', borderColor: 'slate-100' }}
+                >
+                  <ListItemText
+                    primary={<Typography sx={{ fontSize: '0.8rem', fontWeight: 500 }}>{feature}</Typography>}
+                  />
+                </ListItem>
+              ))}
+            </List>
+          </Box>
+        </DialogContent>
+        <Divider />
+        <DialogActions sx={{ p: 2.5, gap: 1 }}>
+          <Button onClick={() => setPlanDialogOpen(false)} variant="outlined" color="inherit" sx={{ fontWeight: 700 }}>
+            Cancel
+          </Button>
+          <Button onClick={handleSavePlanForm} variant="contained" color="secondary" sx={{ fontWeight: 700 }}>
+            Save Plan
           </Button>
         </DialogActions>
       </Dialog>
