@@ -1,6 +1,7 @@
 const express = require('express');
 const { 
   getCustomizationSettings, 
+  updateCustomizationSettings,
   getLeadStages,
   getCompanySettings,
   updateCompanySettings,
@@ -18,7 +19,8 @@ const { authMiddleware } = require('../middlewares/authMiddleware');
 const router = express.Router();
 
 router.route('/customization')
-  .get(authMiddleware, getCustomizationSettings);
+  .get(authMiddleware, getCustomizationSettings)
+  .put(authMiddleware, updateCustomizationSettings);
 
 router.route('/lead-stages')
   .get(authMiddleware, getLeadStages);

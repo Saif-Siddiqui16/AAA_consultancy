@@ -58,6 +58,7 @@ import LinkedInIcon from '@mui/icons-material/LinkedIn';
 import TwitterIcon from '@mui/icons-material/Twitter';
 import PinterestIcon from '@mui/icons-material/Pinterest';
 import ChatIcon from '@mui/icons-material/Chat';
+import { io } from 'socket.io-client';
 
 // Contexts & Hooks
 import { useThemeMode } from '../contexts/ThemeContext';
@@ -239,6 +240,31 @@ export const DashboardLayout = () => {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [socialMenuOpen, setSocialMenuOpen] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+
+  // WebSockets Real-Time Sync
+  useEffect(() => {
+    if (!currentUser) return;
+    
+    // Connect to backend Socket.io
+    const socket = io('http://localhost:5000');
+    
+    // Join the specific role room
+    socket.emit('join-role', currentUser.role);
+
+    // Listen for permission updates
+    socket.on('permissions_updated', (newPermissions) => {
+      console.log('Real-time permissions updated via WebSocket:', newPermissions);
+      // Invalidate the cache so React Query fetches the new settings immediately
+      queryClient.invalidateQueries({ queryKey: ['customization-settings'] });
+      
+      // Show an alert to the user (optional)
+      showAlert('Your permissions have been updated by an administrator.', 'info');
+    });
+
+    return () => {
+      socket.disconnect();
+    };
+  }, [currentUser, queryClient, showAlert]);
 
   const [connectedPlatforms, setConnectedPlatforms] = useState(() => {
     try {

@@ -24,6 +24,10 @@ model User {
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
 
+  createdById      String?
+  creator          User?    @relation("UserCreator", fields: [createdById], references: [id])
+  createdUsers     User[]   @relation("UserCreator")
+
   assignedLeads    Lead[]   @relation("AgentLeads")
   assignedClients  Client[] @relation("AgentClients")
   consultations    Consultation[] @relation("AgentConsultations")
@@ -78,6 +82,9 @@ model Client {
   documentUploadAllowed Boolean @default(false)
   profileSummary   String?  @db.Text
   
+  deviceFingerprint String?
+  isBlocked         Boolean  @default(false)
+
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
 
@@ -89,6 +96,7 @@ model Client {
   payments         Payment[]
   applicationCycles ApplicationCycle[]
   refundRequests   RefundRequest[]
+  communications   CommunicationLog[]
 
   @@map("clients")
 }
@@ -131,9 +139,14 @@ model ApplicationCycle {
   lawyerAssigned   String?
   appealDeadline   DateTime?
   status           String   @default("Resubmission in Progress")
+  serviceType      String?
   
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
+
+  payments         Payment[]
+  documents        Document[]
+  history          AuditLog[]
 
   @@map("application_cycles")
 }
@@ -142,6 +155,8 @@ model Payment {
   id               String   @id @default(uuid())
   clientId         String
   client           Client   @relation(fields: [clientId], references: [id])
+  applicationId    String?
+  applicationCycle ApplicationCycle? @relation(fields: [applicationId], references: [id])
   
   amount           Float
   discount         Float    @default(0)
@@ -149,6 +164,7 @@ model Payment {
   status           String   @default("Pending") // Pending, Paid, Refund Under Review, Refunded
   paymentMethod    String?
   transactionId    String?
+  gatewayId        String?
   billingDate      DateTime @default(now())
   dueDate          DateTime
 
@@ -162,6 +178,8 @@ model Document {
   id               String   @id @default(uuid())
   clientId         String
   client           Client   @relation(fields: [clientId], references: [id])
+  applicationId    String?
+  applicationCycle ApplicationCycle? @relation(fields: [applicationId], references: [id])
   
   name             String
   category         String
@@ -240,4 +258,35 @@ model Template {
   updatedAt            DateTime @updatedAt
 
   @@map("templates")
+}
+
+model CommunicationLog {
+  id                 String   @id @default(uuid())
+  clientId           String
+  client             Client   @relation(fields: [clientId], references: [id])
+  channel            String   // WHATSAPP, EMAIL, MEETING
+  direction          String   // INBOUND, OUTBOUND
+  messageId          String?  @unique // Deduplication (Meta/WA Message ID)
+  externalProviderId String?  
+  deliveryStatus     String   // SENT, DELIVERED, FAILED
+  readStatus         Boolean  @default(false)
+  failureReason      String?  @db.Text
+  content            String   @db.Text
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  @@map("communication_logs")
+}
+
+model AuditLog {
+  id               String   @id @default(uuid())
+  applicationId    String
+  applicationCycle ApplicationCycle @relation(fields: [applicationId], references: [id])
+  actorId          String   // System, User UUID, or Webhook ID
+  action           String   // e.g., STATUS_CHANGED, DOC_UPLOADED
+  previousState    Json?
+  newState         Json
+  createdAt        DateTime @default(now()) // Immutable (No updateAt)
+
+  @@map("audit_logs")
 }

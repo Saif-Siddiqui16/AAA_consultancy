@@ -1,6 +1,5 @@
-const getCustomizationSettings = async (req, res) => {
-  const DEFAULT_CUSTOMIZATION = {
-    admin: {
+let DEFAULT_CUSTOMIZATION = {
+  admin: {
       menus: ['Dashboard', 'Agents', 'Active Cases', 'Doc Verification', 'Finance', 'Closed Cases', 'Clients', 'Leads', 'Social Inbox', 'Marketing', 'Calendar', 'All Agents Performance', 'Integrations'],
       cards: ['Total Clients', 'Today\'s Clients', 'Total Consultations', 'Today\'s Consultations', 'Upcoming Meetings', 'Pending Payments', 'Total Revenue', 'Active Cases', 'Completed Cases', 'Lost Consultations', 'Revenue Today', 'Outstanding Revenue', 'Refunded (50% Rejections)'],
       features: ['canEditTranslationRates']
@@ -27,7 +26,35 @@ const getCustomizationSettings = async (req, res) => {
     }
   };
 
+const getCustomizationSettings = async (req, res) => {
   res.json(DEFAULT_CUSTOMIZATION);
+};
+
+const updateCustomizationSettings = async (req, res) => {
+  try {
+    const { settings } = req.body;
+    
+    // In a real database, you'd save this to a RolePermissions table.
+    // Here we update the in-memory object for demonstration.
+    if (settings) {
+      DEFAULT_CUSTOMIZATION = { ...DEFAULT_CUSTOMIZATION, ...settings };
+    }
+
+    // BROADCAST the change using Socket.io to all affected users
+    const io = req.app.get('io');
+    if (io && settings) {
+      Object.keys(settings).forEach(role => {
+        if (role !== 'allowAdminCustomOverrides') {
+          console.log(`Emitting permissions_updated to room: role:${role}`);
+          io.to(`role:${role}`).emit('permissions_updated', settings[role]);
+        }
+      });
+    }
+
+    res.json({ success: true, message: 'Permissions updated successfully', data: DEFAULT_CUSTOMIZATION });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
 };
 
 const getLeadStages = async (req, res) => {
@@ -249,6 +276,7 @@ const updateWhatsappTemplates = async (req, res) => {
 
 module.exports = { 
   getCustomizationSettings, 
+  updateCustomizationSettings,
   getLeadStages,
   getCompanySettings,
   updateCompanySettings,

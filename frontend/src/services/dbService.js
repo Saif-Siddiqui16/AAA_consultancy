@@ -140,6 +140,10 @@ export const dbService = {
     const res = await apiClient.get('/settings/customization');
     return res.data;
   },
+  saveCustomizationSettings: async (settings) => {
+    const res = await apiClient.put('/settings/customization', { settings });
+    return res.data;
+  },
   getLeadStages: async () => {
     const res = await apiClient.get('/settings/lead-stages');
     return res.data;
