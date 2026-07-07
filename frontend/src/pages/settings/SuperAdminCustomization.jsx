@@ -1,50 +1,48 @@
-import React, { useState, useEffect } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import React, { useState } from 'react';
 import Box from '@mui/material/Box';
 import Paper from '@mui/material/Paper';
 import Typography from '@mui/material/Typography';
-
-import Tab from '@mui/material/Tab';
-import Tabs from '@mui/material/Tabs';
 import Button from '@mui/material/Button';
-import FormGroup from '@mui/material/FormGroup';
-import FormControlLabel from '@mui/material/FormControlLabel';
-import Checkbox from '@mui/material/Checkbox';
-import Switch from '@mui/material/Switch';
 import Divider from '@mui/material/Divider';
-import CircularProgress from '@mui/material/CircularProgress';
-import SaveIcon from '@mui/icons-material/Save';
-import RestartAltIcon from '@mui/icons-material/RestartAlt';
-import TextField from '@mui/material/TextField';
 import Chip from '@mui/material/Chip';
-import IconButton from '@mui/material/IconButton';
-import Tooltip from '@mui/material/Tooltip';
-import MenuItem from '@mui/material/MenuItem';
-import Select from '@mui/material/Select';
-import FormControl from '@mui/material/FormControl';
-import InputLabel from '@mui/material/InputLabel';
 import Dialog from '@mui/material/Dialog';
 import DialogTitle from '@mui/material/DialogTitle';
 import DialogContent from '@mui/material/DialogContent';
 import DialogActions from '@mui/material/DialogActions';
-import List from '@mui/material/List';
-import ListItem from '@mui/material/ListItem';
-import ListItemText from '@mui/material/ListItemText';
-
-// Icons
-import AddIcon from '@mui/icons-material/Add';
+import TextField from '@mui/material/TextField';
+import IconButton from '@mui/material/IconButton';
 import DeleteIcon from '@mui/icons-material/Delete';
 import EditIcon from '@mui/icons-material/Edit';
-import ArrowUpwardIcon from '@mui/icons-material/ArrowUpward';
-import ArrowDownwardIcon from '@mui/icons-material/ArrowDownward';
-import CheckCircleIcon from '@mui/icons-material/CheckCircle';
+import AddIcon from '@mui/icons-material/Add';
+import RestartAltIcon from '@mui/icons-material/RestartAlt';
+import Checkbox from '@mui/material/Checkbox';
+import Switch from '@mui/material/Switch';
+import FormControlLabel from '@mui/material/FormControlLabel';
+import List from '@mui/material/List';
+import ListItemButton from '@mui/material/ListItemButton';
+import ListItemText from '@mui/material/ListItemText';
+import Tab from '@mui/material/Tab';
+import Tabs from '@mui/material/Tabs';
 
-// Services
-import { dbService } from '../../services/dbService';
+// Services & Components
 import PageHeader from '../../components/PageHeader';
 import { useAlert } from '../../contexts/AlertContext';
 
-const AVAILABLE_MENUS = [
+const DEFAULT_LEAD_STAGES = [
+  { id: 'stage_new_lead', name: 'New Lead', type: 'lead', color: '#2196F3', emoji: '🆕' },
+  { id: 'stage_hot_lead', name: 'Hot Lead', type: 'lead', color: '#FF9800', emoji: '🔥' },
+  { id: 'stage_processing', name: 'Processing', type: 'lead', color: '#3F51B5', emoji: '⚙️' },
+  { id: 'stage_under_consultation', name: 'Under Consultation', type: 'lead', color: '#9C27B0', emoji: '📅' },
+  { id: 'stage_waiting_payment', name: 'Waiting for Payment', type: 'client', color: '#FF5722', emoji: '💳' },
+  { id: 'stage_documents_pending', name: 'Documents Pending', type: 'client', color: '#E91E63', emoji: '📎' },
+  { id: 'stage_under_process', name: 'Under Process', type: 'client', color: '#03A9F4', emoji: '📂' },
+  { id: 'stage_completed', name: 'Completed', type: 'client', color: '#4CAF50', emoji: '✅' },
+  { id: 'stage_closed', name: 'Closed', type: 'client', color: '#9E9E9E', emoji: '🔒' },
+  { id: 'stage_cold_lead', name: 'Cold Lead', type: 'lead', color: '#009688', emoji: '❄️' },
+  { id: 'stage_lost_lead', name: 'Lost Lead', type: 'lead', color: '#F44336', emoji: '❌' },
+];
+
+const ALL_SIDEBAR_MENUS = [
   'Dashboard',
   'Agents',
   'Active Cases',
@@ -58,43 +56,6 @@ const AVAILABLE_MENUS = [
   'Calendar',
   'All Agents Performance',
   'Integrations'
-];
-
-const AVAILABLE_CARDS = [
-  'Total Clients',
-  'Today\'s Clients',
-  'Total Consultations',
-  'Today\'s Consultations',
-  'Upcoming Meetings',
-  'Pending Payments',
-  'Total Revenue',
-  'Active Cases',
-  'Completed Cases',
-  'Lost Consultations',
-  'Revenue Today',
-  'Outstanding Revenue',
-  'Refunded (50% Rejections)'
-];
-
-const ROLES = [
-  { id: 'admin', label: 'Admin (General Manager)' },
-  { id: 'operations', label: 'Operations Admin' },
-  { id: 'finance', label: 'Finance Officer' },
-  { id: 'consultant', label: 'Consultant / Visa Agent' },
-  { id: 'marketing', label: 'Marketing Executive' }
-];
-
-const PRESET_COLORS = [
-  { value: '#2196F3', name: 'Blue' },
-  { value: '#FF9800', name: 'Amber' },
-  { value: '#FF5722', name: 'Orange' },
-  { value: '#4CAF50', name: 'Green' },
-  { value: '#E91E63', name: 'Pink' },
-  { value: '#9C27B0', name: 'Purple' },
-  { value: '#3F51B5', name: 'Indigo' },
-  { value: '#009688', name: 'Teal' },
-  { value: '#F44336', name: 'Red' },
-  { value: '#9E9E9E', name: 'Gray' }
 ];
 
 const DEFAULT_PLANS = [
@@ -111,7 +72,17 @@ const DEFAULT_PLANS = [
       '❌ Cloud AWS back-ups',
       '❌ Verification dashboard'
     ],
-    isRecommended: false
+    isRecommended: false,
+    rolePermissions: {
+      admin: ['Dashboard', 'Agents', 'Clients', 'Leads'],
+      consultant: ['Dashboard', 'Clients', 'Leads'],
+      operations: ['Dashboard', 'Clients', 'Leads'],
+      finance: ['Dashboard'],
+      marketing: ['Dashboard', 'Leads']
+    },
+    stages: ['stage_new_lead', 'stage_processing', 'stage_completed', 'stage_closed'],
+    maxAgents: 3,
+    maxCases: 50
   },
   {
     id: 'growth',
@@ -126,7 +97,17 @@ const DEFAULT_PLANS = [
       'AWS Secure Backups dashboard',
       'Team permissions manager'
     ],
-    isRecommended: true
+    isRecommended: true,
+    rolePermissions: {
+      admin: ['Dashboard', 'Agents', 'Active Cases', 'Doc Verification', 'Finance', 'Closed Cases', 'Clients', 'Leads', 'Social Inbox', 'Marketing', 'Calendar', 'All Agents Performance', 'Integrations'],
+      consultant: ['Dashboard', 'Clients', 'Leads', 'Social Inbox', 'Calendar'],
+      operations: ['Dashboard', 'Agents', 'Active Cases', 'Doc Verification', 'Closed Cases', 'Clients', 'Leads', 'Social Inbox', 'Marketing', 'Calendar', 'All Agents Performance'],
+      finance: ['Dashboard', 'Finance'],
+      marketing: ['Dashboard', 'Leads', 'Marketing']
+    },
+    stages: ['stage_new_lead', 'stage_hot_lead', 'stage_processing', 'stage_under_consultation', 'stage_waiting_payment', 'stage_documents_pending', 'stage_under_process', 'stage_completed', 'stage_closed', 'stage_cold_lead', 'stage_lost_lead'],
+    maxAgents: 10,
+    maxCases: 200
   },
   {
     id: 'enterprise',
@@ -141,28 +122,24 @@ const DEFAULT_PLANS = [
       'Custom API Integrations',
       'Priority SLA Support'
     ],
-    isRecommended: false
+    isRecommended: false,
+    rolePermissions: {
+      admin: ['Dashboard', 'Agents', 'Active Cases', 'Doc Verification', 'Finance', 'Closed Cases', 'Clients', 'Leads', 'Social Inbox', 'Marketing', 'Calendar', 'All Agents Performance', 'Integrations'],
+      consultant: ['Dashboard', 'Clients', 'Leads', 'Social Inbox', 'Calendar'],
+      operations: ['Dashboard', 'Agents', 'Active Cases', 'Doc Verification', 'Closed Cases', 'Clients', 'Leads', 'Social Inbox', 'Marketing', 'Calendar', 'All Agents Performance'],
+      finance: ['Dashboard', 'Finance'],
+      marketing: ['Dashboard', 'Leads', 'Marketing']
+    },
+    stages: ['stage_new_lead', 'stage_hot_lead', 'stage_processing', 'stage_under_consultation', 'stage_waiting_payment', 'stage_documents_pending', 'stage_under_process', 'stage_completed', 'stage_closed', 'stage_cold_lead', 'stage_lost_lead'],
+    maxAgents: -1,
+    maxCases: -1
   }
 ];
 
 export const SuperAdminCustomization = () => {
-  const queryClient = useQueryClient();
   const { showAlert } = useAlert();
-  
-  // Top level tabs: 0 = Role Permissions, 1 = Stage Manager
-  const [topTab, setTopTab] = useState(0);
-  const [activeTab, setActiveTab] = useState(0);
-  const currentRoleId = ROLES[activeTab].id;
 
-  // Local state for modified customization
-  const [localSettings, setLocalSettings] = useState(null);
-
-  // Modal / Editing states for Custom Stages
-  const [stageDialogOpen, setStageDialogOpen] = useState(false);
-  const [editingStage, setEditingStage] = useState(null); // null means adding new
-  const [stageForm, setStageForm] = useState({ name: '', emoji: '🆕', color: '#2196F3', type: 'lead' });
-
-  // Local state for SaaS CRM Plans
+  // Load plans with localized persistence fallback
   const [plans, setPlans] = useState(() => {
     const saved = localStorage.getItem('saas_plans');
     if (saved) {
@@ -172,213 +149,126 @@ export const SuperAdminCustomization = () => {
         console.error(e);
       }
     }
+    localStorage.setItem('saas_plans', JSON.stringify(DEFAULT_PLANS));
     return DEFAULT_PLANS;
   });
+
   const [planDialogOpen, setPlanDialogOpen] = useState(false);
   const [editingPlan, setEditingPlan] = useState(null); // null means adding new
-  const [planForm, setPlanForm] = useState({ name: '', price: '', billingPeriod: '/ month', description: '', features: [], isRecommended: false });
-  const [newFeature, setNewFeature] = useState('');
+  
+  // Dialog configuration state
+  const [dialogTab, setDialogTab] = useState(0);
+  const [selectedRoleForPermissions, setSelectedRoleForPermissions] = useState('admin');
 
-  // Fetch customization settings
-  const { data: customizationSettings, isLoading: isCustomizationLoading } = useQuery({
-    queryKey: ['customization-settings'],
-    queryFn: dbService.getCustomizationSettings });
-
-  // Fetch customizable stages
-  const { data: leadStages = [], isLoading: isStagesLoading } = useQuery({
-    queryKey: ['lead-stages'],
-    queryFn: dbService.getLeadStages });
-
-  useEffect(() => {
-    if (customizationSettings && !localSettings) {
-      setLocalSettings(customizationSettings);
+  // Contact details form state loaded from localStorage
+  const [contactForm, setContactForm] = useState(() => {
+    try {
+      const saved = localStorage.getItem('landing_contact_details');
+      if (saved) return JSON.parse(saved);
+    } catch (e) {
+      console.error(e);
     }
-  }, [customizationSettings, localSettings]);
-
-  const saveSettingsMutation = useMutation({
-    mutationFn: dbService.saveCustomizationSettings,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['customization-settings'] });
-      showAlert('Customization layout settings updated in real-time!', 'success');
-    }
-  });
-
-  const saveStagesMutation = useMutation({
-    mutationFn: dbService.saveLeadStages,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['lead-stages'] });
-      queryClient.invalidateQueries({ queryKey: ['leads'] });
-      queryClient.invalidateQueries({ queryKey: ['clients'] });
-      showAlert('Lifecycle stages saved successfully!', 'success');
-    }
-  });
-
-  const handleToggleMenu = (menu) => {
-    if (!localSettings) return;
-    const currentMenus = localSettings[currentRoleId]?.menus || [];
-    const updatedMenus = currentMenus.includes(menu)
-      ? currentMenus.filter(m => m !== menu)
-      : [...currentMenus, menu];
-
-    setLocalSettings({
-      ...localSettings,
-      [currentRoleId]: {
-        ...localSettings[currentRoleId],
-        menus: updatedMenus
-      }
-    });
-  };
-
-  const handleToggleCard = (card) => {
-    if (!localSettings) return;
-    const currentCards = localSettings[currentRoleId]?.cards || [];
-    const updatedCards = currentCards.includes(card)
-      ? currentCards.filter(c => c !== card)
-      : [...currentCards, card];
-
-    setLocalSettings({
-      ...localSettings,
-      [currentRoleId]: {
-        ...localSettings[currentRoleId],
-        cards: updatedCards
-      }
-    });
-  };
-
-  const handleToggleFeature = (feature) => {
-    if (!localSettings) return;
-    const currentFeatures = localSettings[currentRoleId]?.features || [];
-    const updatedFeatures = currentFeatures.includes(feature)
-      ? currentFeatures.filter(f => f !== feature)
-      : [...currentFeatures, feature];
-
-    setLocalSettings({
-      ...localSettings,
-      [currentRoleId]: {
-        ...localSettings[currentRoleId],
-        features: updatedFeatures
-      }
-    });
-  };
-
-  const handleSave = () => {
-    if (!localSettings) return;
-    saveSettingsMutation.mutate(localSettings);
-  };
-
-  const handleResetDefaults = () => {
-    const DEFAULT_CUSTOMIZATION = {
-      allowAdminCustomOverrides: false,
-      admin: {
-        menus: ['Dashboard', 'Agents', 'Active Cases', 'Doc Verification', 'Finance', 'Closed Cases', 'Clients', 'Leads', 'Social Inbox', 'Marketing', 'Calendar', 'All Agents Performance', 'Integrations'],
-        cards: ['Total Clients', 'Today\'s Clients', 'Total Consultations', 'Today\'s Consultations', 'Upcoming Meetings', 'Pending Payments', 'Total Revenue', 'Active Cases', 'Completed Cases', 'Lost Consultations', 'Revenue Today', 'Outstanding Revenue', 'Refunded (50% Rejections)'],
-        features: ['canEditTranslationRates']
-      },
-      operations: {
-        menus: ['Dashboard', 'Agents', 'Active Cases', 'Doc Verification', 'Closed Cases', 'Clients', 'Leads', 'Social Inbox', 'Marketing', 'Calendar', 'All Agents Performance'],
-        cards: ['Total Clients', 'Today\'s Clients', 'Total Consultations', 'Today\'s Consultations', 'Upcoming Meetings', 'Active Cases', 'Completed Cases'],
-        features: []
-      },
-      finance: {
-        menus: ['Dashboard', 'Finance'],
-        cards: ['Total Revenue', 'Pending Payments'],
-        features: []
-      },
-      consultant: {
-        menus: ['Dashboard', 'Clients', 'Leads', 'Social Inbox', 'Calendar'],
-        cards: ['Upcoming Meetings', 'Active Cases'],
-        features: []
-      },
-      marketing: {
-        menus: ['Dashboard', 'Leads', 'Marketing'],
-        cards: ['Total Consultations', 'Today\'s Consultations'],
-        features: []
-      }
+    return {
+      phone: '+971 50 955 4142',
+      email: 'info@aaaconsultancy.com',
+      address: 'Business Village, Block B, 4th Floor, Office F09 Port Saeed, Deira, Dubai, UAE',
+      facebook: '#',
+      instagram: '#',
+      twitter: '#',
+      linkedin: '#'
     };
-    setLocalSettings(DEFAULT_CUSTOMIZATION);
-    saveSettingsMutation.mutate(DEFAULT_CUSTOMIZATION);
+  });
+
+  const handleSaveContactForm = () => {
+    localStorage.setItem('landing_contact_details', JSON.stringify(contactForm));
+    showAlert('Landing page contact details saved successfully! Refresh the page to see changes.', 'success');
   };
 
-  // Stage CRUD operations
-  const handleOpenAddStage = () => {
-    setEditingStage(null);
-    setStageForm({ name: '', emoji: '🆕', color: '#2196F3', type: 'lead' });
-    setStageDialogOpen(true);
-  };
-
-  const handleOpenEditStage = (stage) => {
-    setEditingStage(stage.id);
-    setStageForm({ name: stage.name, emoji: stage.emoji || '🆕', color: stage.color || '#2196F3', type: stage.type || 'lead' });
-    setStageDialogOpen(true);
-  };
-
-  const handleSaveStage = () => {
-    if (!stageForm.name) return;
-    let updatedStages = [...leadStages];
-    if (editingStage) {
-      updatedStages = updatedStages.map(s => s.id === editingStage ? { ...s, ...stageForm } : s);
-    } else {
-      const newId = 'stage_' + Math.random().toString(36).substring(2, 9);
-      updatedStages.push({ id: newId, ...stageForm });
-    }
-    saveStagesMutation.mutate(updatedStages);
-    setStageDialogOpen(false);
-  };
-
-  const handleDeleteStage = (id) => {
-    if (window.confirm('Are you sure you want to delete this stage? Active leads/clients in this stage will revert to default.')) {
-      const updatedStages = leadStages.filter(s => s.id !== id);
-      saveStagesMutation.mutate(updatedStages);
+  const handleResetContactForm = () => {
+    if (window.confirm('Reset contact details to default values?')) {
+      const defaults = {
+        phone: '+971 50 955 4142',
+        email: 'info@aaaconsultancy.com',
+        address: 'Business Village, Block B, 4th Floor, Office F09 Port Saeed, Deira, Dubai, UAE',
+        facebook: '#',
+        instagram: '#',
+        twitter: '#',
+        linkedin: '#'
+      };
+      setContactForm(defaults);
+      localStorage.setItem('landing_contact_details', JSON.stringify(defaults));
+      showAlert('Restored default contact details!', 'success');
     }
   };
 
-  const handleMoveStage = (index, direction) => {
-    if (direction === 'up' && index === 0) return;
-    if (direction === 'down' && index === leadStages.length - 1) return;
-    
-    const updatedStages = [...leadStages];
-    const targetIndex = direction === 'up' ? index - 1 : index + 1;
-    const [movedStage] = updatedStages.splice(index, 1);
-    updatedStages.splice(targetIndex, 0, movedStage);
-    saveStagesMutation.mutate(updatedStages);
-  };
+  // Form Fields State
+  const [planForm, setPlanForm] = useState({
+    name: '',
+    price: '',
+    billingPeriod: '/ month',
+    description: '',
+    features: [],
+    isRecommended: false,
+    rolePermissions: {
+      admin: [],
+      consultant: [],
+      operations: [],
+      finance: [],
+      marketing: []
+    },
+    stages: [],
+    maxAgents: 3,
+    maxCases: 50
+  });
 
-  const handleResetStages = () => {
-    if (window.confirm('Are you sure you want to reset lifecycle stages to their original factory defaults?')) {
-      const DEFAULT_LEAD_STAGES = [
-        { id: 'stage_new_lead', name: 'New Lead', type: 'lead', color: '#2196F3', emoji: '🆕' },
-        { id: 'stage_hot_lead', name: 'Hot Lead', type: 'lead', color: '#FF9800', emoji: '🔥' },
-        { id: 'stage_processing', name: 'Processing', type: 'lead', color: '#3F51B5', emoji: '⚙️' },
-        { id: 'stage_under_consultation', name: 'Under Consultation', type: 'lead', color: '#9C27B0', emoji: '📅' },
-        { id: 'stage_waiting_payment', name: 'Waiting for Payment', type: 'client', color: '#FF5722', emoji: '💳' },
-        { id: 'stage_documents_pending', name: 'Documents Pending', type: 'client', color: '#E91E63', emoji: '📎' },
-        { id: 'stage_under_process', name: 'Under Process', type: 'client', color: '#03A9F4', emoji: '📂' },
-        { id: 'stage_completed', name: 'Completed', type: 'client', color: '#4CAF50', emoji: '✅' },
-        { id: 'stage_closed', name: 'Closed', type: 'client', color: '#9E9E9E', emoji: '🔒' },
-        { id: 'stage_cold_lead', name: 'Cold Lead', type: 'lead', color: '#009688', emoji: '❄️' },
-        { id: 'stage_lost_lead', name: 'Lost Lead', type: 'lead', color: '#F44336', emoji: '❌' },
-      ];
-      saveStagesMutation.mutate(DEFAULT_LEAD_STAGES);
-    }
-  };
+  const [newFeature, setNewFeature] = useState('');
 
   const handleSavePlans = (updatedPlans) => {
     setPlans(updatedPlans);
     localStorage.setItem('saas_plans', JSON.stringify(updatedPlans));
-    showAlert('SaaS CRM plans updated in real-time!', 'success');
+    showAlert('SaaS pricing and customization configurations updated in real-time!', 'success');
   };
 
   const handleOpenAddPlan = () => {
     setEditingPlan(null);
-    setPlanForm({ name: '', price: '', billingPeriod: '/ month', description: '', features: [], isRecommended: false });
+    setPlanForm({
+      name: '',
+      price: '',
+      billingPeriod: '/ month',
+      description: '',
+      features: [],
+      isRecommended: false,
+      rolePermissions: {
+        admin: ['Dashboard', 'Agents', 'Clients'],
+        consultant: ['Dashboard', 'Clients'],
+        operations: ['Dashboard', 'Clients'],
+        finance: ['Dashboard'],
+        marketing: ['Dashboard']
+      },
+      stages: ['stage_new_lead', 'stage_processing', 'stage_completed', 'stage_closed'],
+      maxAgents: 3,
+      maxCases: 50
+    });
     setNewFeature('');
+    setDialogTab(0);
     setPlanDialogOpen(true);
   };
 
   const handleOpenEditPlan = (plan) => {
     setEditingPlan(plan.id);
-    setPlanForm({ ...plan });
+    setPlanForm({
+      ...plan,
+      rolePermissions: plan.rolePermissions || {
+        admin: [],
+        consultant: [],
+        operations: [],
+        finance: [],
+        marketing: []
+      },
+      stages: plan.stages || []
+    });
     setNewFeature('');
+    setDialogTab(0);
     setPlanDialogOpen(true);
   };
 
@@ -403,17 +293,17 @@ export const SuperAdminCustomization = () => {
   };
 
   const handleDeletePlan = (id) => {
-    if (window.confirm('Are you sure you want to delete this pricing plan?')) {
+    if (window.confirm('Are you sure you want to delete this pricing plan? This might affect existing subscriptions.')) {
       const updated = plans.filter(p => p.id !== id);
       handleSavePlans(updated);
     }
   };
 
   const handleResetPlans = () => {
-    if (window.confirm('Are you sure you want to reset all plans to factory defaults?')) {
-      localStorage.removeItem('saas_plans');
+    if (window.confirm('Are you sure you want to reset all plans and default permissions to original factory defaults?')) {
+      localStorage.setItem('saas_plans', JSON.stringify(DEFAULT_PLANS));
       setPlans(DEFAULT_PLANS);
-      showAlert('Restored default pricing plans!', 'success');
+      showAlert('Restored default pricing plans and permissions!', 'success');
     }
   };
 
@@ -433,656 +323,527 @@ export const SuperAdminCustomization = () => {
     }));
   };
 
-  if (isCustomizationLoading || !localSettings || isStagesLoading) {
-    return (
-      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '60vh' }}>
-        <CircularProgress />
-      </Box>
-    );
-  }
-
-  const roleMenus = localSettings[currentRoleId]?.menus || [];
-  const roleCards = localSettings[currentRoleId]?.cards || [];
-  const roleFeatures = localSettings[currentRoleId]?.features || [];
-
   return (
-    <Box>
+    <Box sx={{ pb: 4 }}>
       <PageHeader
-        title="CRM Portal Customization Hub"
-        subtitle="Manage navigation layout permissions, dashboard stats cards, and custom customer lifecycle stages."
-      />
-
-      <Box sx={{ width: '100%', mb: 3 }}>
-        <Paper square sx={{ borderRadius: 3, borderBottom: 1, borderColor: 'divider', mb: 3 }}>
-          <Tabs
-            value={topTab}
-            onChange={(e, val) => setTopTab(val)}
-            textColor="secondary"
-            indicatorColor="secondary"
-            sx={{ px: 3 }}
-          >
-            <Tab label="👤 Role Permissions" sx={{ fontWeight: 800, px: 3, py: 2 }} />
-            <Tab label="⚡ Lifecycle Stages Manager" sx={{ fontWeight: 800, px: 3, py: 2 }} />
-            <Tab label="💳 SaaS Plans Manager" sx={{ fontWeight: 800, px: 3, py: 2 }} />
-          </Tabs>
-        </Paper>
-      </Box>
-
-      {/* ─── TAB 0: Role Permissions ─── */}
-      {topTab === 0 && (
-        <Box>
-          <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 2, mb: 3 }}>
+        title="SaaS CRM Customization Hub"
+        subtitle="Manage subscription plan tiers, configure plan-specific role menu options, and customize target visa pipeline stages."
+        action={
+          <Box sx={{ display: 'flex', gap: 1.5 }}>
             <Button
               variant="outlined"
               color="inherit"
               startIcon={<RestartAltIcon />}
-              onClick={handleResetDefaults}
+              onClick={handleResetPlans}
               sx={{ fontWeight: 700 }}
             >
-              Reset Permissions
+              Reset to Defaults
             </Button>
             <Button
               variant="contained"
               color="secondary"
-              startIcon={<SaveIcon />}
-              onClick={handleSave}
+              startIcon={<AddIcon />}
+              onClick={handleOpenAddPlan}
               sx={{ fontWeight: 700 }}
             >
-              Save Layout Config
+              Add New Plan
             </Button>
           </Box>
+        }
+      />
 
-          {/* General Config Overrides Switch */}
-          <Paper sx={{ p: 3, mb: 3, borderRadius: 3, border: '1px solid', borderColor: 'divider', boxShadow: 'none', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <Box>
-              <Typography variant="subtitle1" sx={{ fontWeight: 800 }}>
-                Allow Admin Managers to Custom Override Agent Permissions
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                When enabled, users with General Admin roles can toggle and customize individual agent menus/dashboard cards directly within the Agents Directory.
-              </Typography>
-            </Box>
-            <Switch
-              color="secondary"
-              checked={localSettings?.allowAdminCustomOverrides || false}
-              onChange={(e) => {
-                setLocalSettings({
-                  ...localSettings,
-                  allowAdminCustomOverrides: e.target.checked
-                });
-              }}
-            />
-          </Paper>
-
-          <Box sx={{ width: '100%', mb: 3 }}>
-            <Paper square sx={{ borderRadius: 2, borderBottom: 1, borderColor: 'divider' }}>
-              <Tabs
-                value={activeTab}
-                onChange={(e, val) => setActiveTab(val)}
-                variant="scrollable"
-                scrollButtons="auto"
-                textColor="secondary"
-                indicatorColor="secondary"
-              >
-                {ROLES.map((role) => (
-                  <Tab key={role.id} label={role.label} sx={{ fontWeight: 700, px: 3 }} />
-                ))}
-              </Tabs>
-            </Paper>
-          </Box>
-
-          <Box className="grid grid-cols-12 gap-2">
-            {/* Menu Permissions */}
-            <Box className="col-span-12 md:col-span-6">
-              <Paper sx={{ p: 4, borderRadius: 3, border: '1px solid', borderColor: 'divider', boxShadow: 'none' }}>
-                <Typography variant="h6" sx={{ fontWeight: 800, mb: 1 }}>
-                  Sidebar Menus Visibility
-                </Typography>
-                <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-                  Toggle the navigation tabs visible in the left sidebar for {ROLES[activeTab].label}.
-                </Typography>
-                <Divider sx={{ mb: 2.5 }} />
-
-                <FormGroup>
-                  <Box className="grid grid-cols-12 gap-1">
-                    {AVAILABLE_MENUS.map((menu) => (
-                      <Box className="col-span-12 sm:col-span-6" key={menu}>
-                        <FormControlLabel
-                          control={
-                            <Checkbox
-                              checked={roleMenus.includes(menu)}
-                              onChange={() => handleToggleMenu(menu)}
-                              color="secondary"
-                            />
-                          }
-                          label={<Typography sx={{ fontSize: '0.9rem', fontWeight: 600 }}>{menu}</Typography>}
-                        />
-                      </Box>
-                    ))}
-                  </Box>
-                </FormGroup>
-              </Paper>
-            </Box>
-
-            {/* Card Permissions */}
-            <Box className="col-span-12 md:col-span-6">
-              <Paper sx={{ p: 4, borderRadius: 3, border: '1px solid', borderColor: 'divider', boxShadow: 'none' }}>
-                <Typography variant="h6" sx={{ fontWeight: 800, mb: 1 }}>
-                  Dashboard Stats Cards Visibility
-                </Typography>
-                <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-                  Configure which summary cards are visible on the dashboard home screen for {ROLES[activeTab].label}.
-                </Typography>
-                <Divider sx={{ mb: 2.5 }} />
-
-                <FormGroup>
-                  <Box className="grid grid-cols-12 gap-1">
-                    {AVAILABLE_CARDS.map((card) => (
-                      <Box className="col-span-12 sm:col-span-6" key={card}>
-                        <FormControlLabel
-                          control={
-                            <Checkbox
-                              checked={roleCards.includes(card)}
-                              onChange={() => handleToggleCard(card)}
-                              color="primary"
-                            />
-                          }
-                          label={<Typography sx={{ fontSize: '0.9rem', fontWeight: 600 }}>{card}</Typography>}
-                        />
-                      </Box>
-                    ))}
-                  </Box>
-                </FormGroup>
-              </Paper>
-            </Box>
-
-            {/* Feature-Level Permissions */}
-            <Box className="col-span-12" sx={{ mt: 2 }}>
-              <Paper sx={{ p: 4, borderRadius: 3, border: '1px solid', borderColor: 'divider', boxShadow: 'none' }}>
-                <Typography variant="h6" sx={{ fontWeight: 800, mb: 1 }}>
-                  Feature-Level Security Permissions
-                </Typography>
-                <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-                  Grant or restrict specific actions and controls inside CRM settings and workflows for {ROLES[activeTab].label}.
-                </Typography>
-                <Divider sx={{ mb: 2.5 }} />
-
-                <FormGroup>
-                  <FormControlLabel
-                    control={
-                      <Checkbox
-                        checked={roleFeatures.includes('canEditTranslationRates')}
-                        onChange={() => handleToggleFeature('canEditTranslationRates')}
-                        color="secondary"
-                      />
-                    }
-                    label={
-                      <Box>
-                        <Typography sx={{ fontSize: '0.9rem', fontWeight: 700 }}>Can Edit Sworn Translation Rates</Typography>
-                        <Typography variant="caption" color="text.secondary">Allows this role to manually modify the per-word rates of English, French, Arabic, Spanish sworn translations in the general settings.</Typography>
-                      </Box>
-                    }
-                  />
-                </FormGroup>
-              </Paper>
-            </Box>
-          </Box>
-        </Box>
-      )}
-
-      {/* ─── TAB 1: Lifecycle Stages Manager ─── */}
-      {topTab === 1 && (
-        <Box>
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 3 }}>
-            <Typography variant="body2" color="text.secondary" sx={{ alignSelf: 'center' }}>
-              Create, rename, reorder, and configure custom lead pipeline & client stages. These changes apply globally.
-            </Typography>
-            <Box sx={{ display: 'flex', gap: 2 }}>
-              <Button
-                variant="outlined"
-                color="inherit"
-                startIcon={<RestartAltIcon />}
-                onClick={handleResetStages}
-                sx={{ fontWeight: 700 }}
-              >
-                Reset to Defaults
-              </Button>
-              <Button
-                variant="contained"
-                color="secondary"
-                startIcon={<AddIcon />}
-                onClick={handleOpenAddStage}
-                sx={{ fontWeight: 700 }}
-              >
-                Add Stage
-              </Button>
-            </Box>
-          </Box>
-
-          <Box className="grid grid-cols-12 gap-2">
-            {/* Lead Categories */}
-            {['lead', 'client', 'universal', 'lost'].map((category) => {
-              const stagesFiltered = leadStages.filter(s => s.type === category);
-              const getCategoryLabel = (cat) => {
-                if (cat === 'lead') return '📋 Lead Pipeline Stages';
-                if (cat === 'client') return '👥 Client Lifecycle Stages';
-                if (cat === 'universal') return '🌐 Universal / Shared Stages';
-                return '❄️ Canceled / Lost Stages';
-              };
-              
-              return (
-                <Box className="col-span-12 md:col-span-6" key={category}>
-                  <Paper sx={{ p: 3, borderRadius: 3, border: '1px solid', borderColor: 'divider', boxShadow: 'none' }}>
-                    <Typography variant="subtitle1" sx={{ fontWeight: 800, mb: 2 }}>
-                      {getCategoryLabel(category)}
-                    </Typography>
-                    <Divider sx={{ mb: 2 }} />
-
-                    {stagesFiltered.length === 0 ? (
-                      <Typography variant="body2" color="text.disabled" sx={{ py: 2, textAlign: 'center' }}>
-                        No stages defined for this category.
-                      </Typography>
-                    ) : (
-                      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
-                        {stagesFiltered.map((stage) => {
-                          const globalIndex = leadStages.findIndex(s => s.id === stage.id);
-                          return (
-                            <Box
-                              key={stage.id}
-                              sx={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'space-between',
-                                p: 2,
-                                borderRadius: 2,
-                                border: '1.5px solid',
-                                borderColor: 'divider',
-                                transition: 'all 0.2s',
-                                '&:hover': {
-                                  borderColor: stage.color || '#2196F3',
-                                  boxShadow: `0 2px 8px ${stage.color || '#2196F3'}15`
-                                }
-                              }}
-                            >
-                              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                                <Typography sx={{ fontSize: '1.25rem' }}>{stage.emoji || '🆕'}</Typography>
-                                <Chip
-                                  label={stage.name}
-                                  size="small"
-                                  sx={{
-                                    bgcolor: (stage.color || '#2196F3') + '15',
-                                    color: stage.color || '#2196F3',
-                                    fontWeight: 700,
-                                    border: '1px solid',
-                                    borderColor: (stage.color || '#2196F3') + '40',
-                                    borderRadius: 1.5,
-                                    fontSize: '0.8rem',
-                                    px: 0.5
-                                  }}
-                                />
-                              </Box>
-
-                              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                                <Tooltip title="Move Up">
-                                  <span>
-                                    <IconButton
-                                      size="small"
-                                      disabled={globalIndex === 0}
-                                      onClick={() => handleMoveStage(globalIndex, 'up')}
-                                    >
-                                      <ArrowUpwardIcon sx={{ fontSize: '0.95rem' }} />
-                                    </IconButton>
-                                  </span>
-                                </Tooltip>
-                                <Tooltip title="Move Down">
-                                  <span>
-                                    <IconButton
-                                      size="small"
-                                      disabled={globalIndex === leadStages.length - 1}
-                                      onClick={() => handleMoveStage(globalIndex, 'down')}
-                                    >
-                                      <ArrowDownwardIcon sx={{ fontSize: '0.95rem' }} />
-                                    </IconButton>
-                                  </span>
-                                </Tooltip>
-                                <Tooltip title="Rename / Edit">
-                                  <IconButton size="small" onClick={() => handleOpenEditStage(stage)}>
-                                    <EditIcon sx={{ fontSize: '0.95rem', color: 'primary.main' }} />
-                                  </IconButton>
-                                </Tooltip>
-                                <Tooltip title="Delete Stage">
-                                  <IconButton size="small" onClick={() => handleDeleteStage(stage.id)}>
-                                    <DeleteIcon sx={{ fontSize: '0.95rem', color: 'error.main' }} />
-                                  </IconButton>
-                                </Tooltip>
-                              </Box>
-                            </Box>
-                          );
-                        })}
-                      </Box>
-                    )}
-                  </Paper>
-                </Box>
-              );
-            })}
-          </Box>
-        </Box>
-      )}
-
-      {/* ─── TAB 2: SaaS Plans Manager ─── */}
-      {topTab === 2 && (
-        <Box>
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 3 }}>
-            <Typography variant="body2" color="text.secondary" sx={{ alignSelf: 'center' }}>
-              Manage CRM SaaS pricing plans displayed on the public Landing Page. Updates reflect instantly.
-            </Typography>
-            <Box sx={{ display: 'flex', gap: 2 }}>
-              <Button
-                variant="outlined"
-                color="inherit"
-                startIcon={<RestartAltIcon />}
-                onClick={handleResetPlans}
-                sx={{ fontWeight: 700 }}
-              >
-                Reset to Defaults
-              </Button>
-              <Button
-                variant="contained"
-                color="secondary"
-                startIcon={<AddIcon />}
-                onClick={handleOpenAddPlan}
-                sx={{ fontWeight: 700 }}
-              >
-                Add Plan
-              </Button>
-            </Box>
-          </Box>
-
-          <Box className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {plans.map((plan) => (
-              <Paper
-                key={plan.id}
+      <Box className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-2">
+        {plans.map((plan) => (
+          <Paper
+            key={plan.id}
+            sx={{
+              p: 3.5,
+              borderRadius: 3,
+              border: plan.isRecommended ? '2.5px solid #D4AF37' : '1px solid',
+              borderColor: plan.isRecommended ? '#D4AF37' : 'divider',
+              position: 'relative',
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'space-between',
+              minHeight: '380px',
+              boxShadow: 'none',
+              '&:hover': {
+                boxShadow: '0 4px 15px rgba(0,0,0,0.05)'
+              }
+            }}
+          >
+            {plan.isRecommended && (
+              <Chip
+                label="RECOMMENDED"
+                size="small"
+                color="warning"
                 sx={{
-                  p: 3.5,
-                  borderRadius: 3,
-                  border: plan.isRecommended ? '2.5px solid #D4AF37' : '1px solid',
-                  borderColor: plan.isRecommended ? '#D4AF37' : 'divider',
-                  position: 'relative',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  justifyContent: 'space-between',
-                  minHeight: '340px',
-                  boxShadow: 'none',
-                  '&:hover': {
-                    boxShadow: '0 4px 15px rgba(0,0,0,0.05)'
-                  }
+                  position: 'absolute',
+                  top: 0,
+                  right: 16,
+                  transform: 'translateY(-50%)',
+                  fontWeight: 800,
+                  fontSize: '0.65rem'
                 }}
+              />
+            )}
+
+            <Box sx={{ flexGrow: 1 }}>
+              <Typography variant="subtitle1" sx={{ fontWeight: 800, color: '#00205B', mb: 0.5 }}>
+                {plan.name}
+              </Typography>
+              <Typography variant="body2" color="text.secondary" sx={{ minHeight: '36px', fontSize: '0.78rem', mb: 2 }}>
+                {plan.description || 'No description provided.'}
+              </Typography>
+              <Divider sx={{ my: 1.5 }} />
+              
+              <Box sx={{ display: 'flex', alignItems: 'baseline', mb: 2 }}>
+                <Typography variant="h5" sx={{ fontWeight: 800, color: '#00205B' }}>
+                  €{plan.price}
+                </Typography>
+                <Typography variant="caption" color="text.secondary" sx={{ ml: 0.5, fontWeight: 600 }}>
+                  {plan.billingPeriod}
+                </Typography>
+              </Box>
+
+              {/* Scope Limits Summary */}
+              <Box sx={{ mb: 2, display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                <Chip
+                  label={`${Object.keys(plan.rolePermissions || {}).length} Roles Set`}
+                  size="small"
+                  sx={{ fontSize: '0.65rem', fontWeight: 700, bgcolor: 'background.neutral' }}
+                />
+                <Chip
+                  label={`${(plan.stages || []).length} Pipeline Stages`}
+                  size="small"
+                  sx={{ fontSize: '0.65rem', fontWeight: 700, bgcolor: 'background.neutral' }}
+                />
+              </Box>
+
+              <Typography variant="caption" sx={{ fontWeight: 800, color: 'text.secondary', display: 'block', mb: 1, textTransform: 'uppercase' }}>
+                Featured Benefits:
+              </Typography>
+              <Box component="ul" sx={{ pl: 2, m: 0, fontSize: '0.8rem', color: 'text.secondary', listStyleType: 'disc' }}>
+                {(plan.features || []).map((feature, fIdx) => (
+                  <li key={fIdx} style={{ marginBottom: '2px' }}>{feature}</li>
+                ))}
+              </Box>
+            </Box>
+
+            <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1, mt: 3, pt: 1.5, borderTop: '1px solid', borderColor: 'divider' }}>
+              <Button
+                size="small"
+                variant="outlined"
+                color="primary"
+                startIcon={<EditIcon sx={{ fontSize: '0.8rem' }} />}
+                onClick={() => handleOpenEditPlan(plan)}
+                sx={{ fontWeight: 700, fontSize: '0.7rem' }}
               >
-                {plan.isRecommended && (
-                  <Chip
-                    label="RECOMMENDED"
-                    size="small"
-                    color="warning"
-                    sx={{
-                      position: 'absolute',
-                      top: 0,
-                      right: 16,
-                      transform: 'translateY(-50%)',
-                      fontWeight: 800,
-                      fontSize: '0.65rem'
-                    }}
-                  />
-                )}
-
-                <Box sx={{ flexGrow: 1 }}>
-                  <Typography variant="subtitle1" sx={{ fontWeight: 800, color: '#00205B', mb: 0.5 }}>
-                    {plan.name}
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary" sx={{ minHeight: '36px', fontSize: '0.78rem', mb: 2 }}>
-                    {plan.description || 'No description provided.'}
-                  </Typography>
-                  <Divider sx={{ my: 1.5 }} />
-                  <Box sx={{ display: 'flex', alignItems: 'baseline', mb: 2 }}>
-                    <Typography variant="h5" sx={{ fontWeight: 800, color: '#00205B' }}>
-                      €{plan.price}
-                    </Typography>
-                    <Typography variant="caption" color="text.secondary" sx={{ ml: 0.5, fontWeight: 600 }}>
-                      {plan.billingPeriod}
-                    </Typography>
-                  </Box>
-
-                  <Typography variant="caption" sx={{ fontWeight: 800, color: 'text.secondary', display: 'block', mb: 1, textTransform: 'uppercase' }}>
-                    Plan Features:
-                  </Typography>
-                  <Box component="ul" sx={{ pl: 2, m: 0, fontSize: '0.8rem', color: 'text.secondary', listStyleType: 'disc' }}>
-                    {(plan.features || []).map((feature, fIdx) => (
-                      <li key={fIdx} style={{ marginBottom: '2px' }}>{feature}</li>
-                    ))}
-                  </Box>
-                </Box>
-
-                <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1, mt: 3, pt: 1.5, borderTop: '1px solid', borderColor: 'divider' }}>
-                  <Button
-                    size="small"
-                    variant="outlined"
-                    color="primary"
-                    startIcon={<EditIcon sx={{ fontSize: '0.8rem' }} />}
-                    onClick={() => handleOpenEditPlan(plan)}
-                    sx={{ fontWeight: 700, fontSize: '0.7rem' }}
-                  >
-                    Edit
-                  </Button>
-                  <Button
-                    size="small"
-                    variant="outlined"
-                    color="error"
-                    startIcon={<DeleteIcon sx={{ fontSize: '0.8rem' }} />}
-                    onClick={() => handleDeletePlan(plan.id)}
-                    sx={{ fontWeight: 700, fontSize: '0.7rem' }}
-                  >
-                    Delete
-                  </Button>
-                </Box>
-              </Paper>
-            ))}
-          </Box>
-        </Box>
-      )}
-      <Dialog open={stageDialogOpen} onClose={() => setStageDialogOpen(false)} maxWidth="xs" fullWidth PaperProps={{ sx: { borderRadius: 3 } }}>
-        <DialogTitle sx={{ fontWeight: 800 }}>
-          {editingStage ? '✏️ Edit Lifecycle Stage' : '➕ Add Custom Stage'}
-        </DialogTitle>
-        <Divider />
-        <DialogContent sx={{ display: 'flex', flexDirection: 'column', gap: 3, pt: 3 }}>
-          <TextField
-            label="Stage Name"
-            size="small"
-            fullWidth
-            value={stageForm.name}
-            onChange={(e) => setStageForm(prev => ({ ...prev, name: e.target.value }))}
-            placeholder="e.g. VIP Customer, Follow-up"
-          />
-
-          <Box className="grid grid-cols-12 gap-2">
-            <Box className="col-span-6">
-              <TextField
-                label="Emoji Icon"
+                Configure Settings
+              </Button>
+              <Button
                 size="small"
-                fullWidth
-                value={stageForm.emoji}
-                onChange={(e) => setStageForm(prev => ({ ...prev, emoji: e.target.value }))}
-                placeholder="e.g. ⭐, 🆕"
-              />
+                variant="outlined"
+                color="error"
+                startIcon={<DeleteIcon sx={{ fontSize: '0.8rem' }} />}
+                onClick={() => handleDeletePlan(plan.id)}
+                sx={{ fontWeight: 700, fontSize: '0.7rem' }}
+              >
+                Delete
+              </Button>
             </Box>
-            <Box className="col-span-6">
-              <FormControl fullWidth size="small">
-                <InputLabel>Category</InputLabel>
-                <Select
-                  label="Category"
-                  value={stageForm.type}
-                  onChange={(e) => setStageForm(prev => ({ ...prev, type: e.target.value }))}
-                >
-                  <MenuItem value="lead">Lead Stage</MenuItem>
-                  <MenuItem value="client">Client Stage</MenuItem>
-                  <MenuItem value="universal">Universal Stage</MenuItem>
-                  <MenuItem value="lost">Lost Stage</MenuItem>
-                </Select>
-              </FormControl>
-            </Box>
-          </Box>
+          </Paper>
+        ))}
+      </Box>
 
-          <Box>
-            <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 700, mb: 1, display: 'block' }}>
-              🎨 Select Theme Color
-            </Typography>
-            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-              {PRESET_COLORS.map((color) => (
-                <Tooltip title={color.name} key={color.value}>
-                  <Box
-                    onClick={() => setStageForm(prev => ({ ...prev, color: color.value }))}
-                    sx={{
-                      width: 28,
-                      height: 28,
-                      borderRadius: '50%',
-                      bgcolor: color.value,
-                      cursor: 'pointer',
-                      border: stageForm.color === color.value ? '2px solid #000' : '2px solid transparent',
-                      transform: stageForm.color === color.value ? 'scale(1.15)' : 'none',
-                      transition: 'all 0.15s',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center'
-                    }}
-                  >
-                    {stageForm.color === color.value && <CheckCircleIcon sx={{ fontSize: '0.9rem', color: '#fff' }} />}
-                  </Box>
-                </Tooltip>
-              ))}
-            </Box>
-          </Box>
-        </DialogContent>
-        <Divider />
-        <DialogActions sx={{ p: 2.5, gap: 1 }}>
-          <Button onClick={() => setStageDialogOpen(false)} variant="outlined" color="inherit" sx={{ fontWeight: 700 }}>
-            Cancel
-          </Button>
-          <Button onClick={handleSaveStage} variant="contained" color="secondary" sx={{ fontWeight: 700 }}>
-            Save Stage
-          </Button>
-        </DialogActions>
-      </Dialog>
+      {/* ─── Landing Page Contact Desk Customizer ─── */}
+      <Paper sx={{ p: 4, borderRadius: 3, border: '1px solid', borderColor: 'divider', boxShadow: 'none', mt: 4 }}>
+        <Typography variant="subtitle1" sx={{ fontWeight: 800, color: '#00205B', mb: 0.5 }}>
+          📞 Landing Page Contact Desk Customizer
+        </Typography>
+        <Typography variant="body2" color="text.secondary" sx={{ mb: 3, fontSize: '0.78rem' }}>
+          Modify the primary email, calling number, office location address, and social links dynamically displayed on the public landing page.
+        </Typography>
 
-      {/* ─── Add / Edit SaaS Plan Dialog ─── */}
-      <Dialog open={planDialogOpen} onClose={() => setPlanDialogOpen(false)} maxWidth="sm" fullWidth PaperProps={{ sx: { borderRadius: 3 } }}>
-        <DialogTitle sx={{ fontWeight: 800 }}>
-          {editingPlan ? '✏️ Edit SaaS License Plan' : '➕ Add SaaS License Plan'}
-        </DialogTitle>
-        <Divider />
-        <DialogContent sx={{ display: 'flex', flexDirection: 'column', gap: 2.5, pt: 3 }}>
-          <Box className="grid grid-cols-12 gap-3">
-            <Box className="col-span-8">
-              <TextField
-                label="Plan Name"
-                size="small"
-                fullWidth
-                value={planForm.name}
-                onChange={(e) => setPlanForm(prev => ({ ...prev, name: e.target.value }))}
-                placeholder="e.g. Pro License, Starter Plan"
-              />
-            </Box>
-            <Box className="col-span-4">
-              <FormControlLabel
-                control={
-                  <Switch
-                    checked={planForm.isRecommended}
-                    onChange={(e) => setPlanForm(prev => ({ ...prev, isRecommended: e.target.checked }))}
-                    color="warning"
-                  />
-                }
-                label={<Typography sx={{ fontSize: '0.78rem', fontWeight: 700 }}>Recommended</Typography>}
-                sx={{ mt: 0.5 }}
-              />
-            </Box>
-          </Box>
-
-          <Box className="grid grid-cols-12 gap-3">
-            <Box className="col-span-6">
-              <TextField
-                label="Price (€)"
-                type="number"
-                size="small"
-                fullWidth
-                value={planForm.price}
-                onChange={(e) => setPlanForm(prev => ({ ...prev, price: e.target.value }))}
-                placeholder="e.g. 199"
-              />
-            </Box>
-            <Box className="col-span-6">
-              <TextField
-                label="Billing Period"
-                size="small"
-                fullWidth
-                value={planForm.billingPeriod}
-                onChange={(e) => setPlanForm(prev => ({ ...prev, billingPeriod: e.target.value }))}
-                placeholder="e.g. / month, / year"
-              />
-            </Box>
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2.5 }}>
+          <Box className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <TextField
+              label="Calling & WhatsApp"
+              size="small"
+              fullWidth
+              value={contactForm.phone}
+              onChange={(e) => setContactForm(prev => ({ ...prev, phone: e.target.value }))}
+              placeholder="e.g. +971 50 955 4142"
+            />
+            <TextField
+              label="Email Address"
+              size="small"
+              fullWidth
+              value={contactForm.email}
+              onChange={(e) => setContactForm(prev => ({ ...prev, email: e.target.value }))}
+              placeholder="e.g. info@aaaconsultancy.com"
+            />
           </Box>
 
           <TextField
-            label="Plan Description"
+            label="Office Address"
             size="small"
             fullWidth
             multiline
             rows={2}
-            value={planForm.description}
-            onChange={(e) => setPlanForm(prev => ({ ...prev, description: e.target.value }))}
-            placeholder="Brief tagline or description of the target audience..."
+            value={contactForm.address}
+            onChange={(e) => setContactForm(prev => ({ ...prev, address: e.target.value }))}
+            placeholder="e.g. Business Village, Block B, Dubai, UAE"
           />
 
-          <Box sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 2, p: 2 }}>
-            <Typography variant="subtitle2" sx={{ fontWeight: 800, mb: 1.5, color: '#00205B' }}>
-              Bullet Features List
-            </Typography>
-            
-            <Box sx={{ display: 'flex', gap: 1, mb: 2 }}>
+          <Typography variant="caption" sx={{ fontWeight: 800, color: 'text.secondary', display: 'block', mt: 1, textTransform: 'uppercase' }}>
+            Social Media Channels
+          </Typography>
+
+          <Box className="grid grid-cols-1 md:grid-cols-4 gap-3">
+            <TextField
+              label="Facebook URL"
+              size="small"
+              fullWidth
+              value={contactForm.facebook}
+              onChange={(e) => setContactForm(prev => ({ ...prev, facebook: e.target.value }))}
+              placeholder="https://facebook.com/..."
+            />
+            <TextField
+              label="Instagram URL"
+              size="small"
+              fullWidth
+              value={contactForm.instagram}
+              onChange={(e) => setContactForm(prev => ({ ...prev, instagram: e.target.value }))}
+              placeholder="https://instagram.com/..."
+            />
+            <TextField
+              label="Twitter / X URL"
+              size="small"
+              fullWidth
+              value={contactForm.twitter}
+              onChange={(e) => setContactForm(prev => ({ ...prev, twitter: e.target.value }))}
+              placeholder="https://twitter.com/..."
+            />
+            <TextField
+              label="LinkedIn URL"
+              size="small"
+              fullWidth
+              value={contactForm.linkedin}
+              onChange={(e) => setContactForm(prev => ({ ...prev, linkedin: e.target.value }))}
+              placeholder="https://linkedin.com/..."
+            />
+          </Box>
+
+          <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1.5, mt: 1.5 }}>
+            <Button
+              variant="outlined"
+              color="inherit"
+              onClick={handleResetContactForm}
+              sx={{ fontWeight: 700 }}
+            >
+              Reset Contact Details
+            </Button>
+            <Button
+              variant="contained"
+              color="secondary"
+              onClick={handleSaveContactForm}
+              sx={{ fontWeight: 700 }}
+            >
+              Save Contact Details
+            </Button>
+          </Box>
+        </Box>
+      </Paper>
+
+      {/* ─── Add / Edit SaaS Plan Dialog ─── */}
+      <Dialog open={planDialogOpen} onClose={() => setPlanDialogOpen(false)} maxWidth="md" fullWidth PaperProps={{ sx: { borderRadius: 3 } }}>
+        <DialogTitle sx={{ fontWeight: 800 }}>
+          {editingPlan ? '⚙️ Configure Plan Customizations' : '➕ Add SaaS License Plan'}
+        </DialogTitle>
+        <Divider />
+        <DialogContent sx={{ display: 'flex', flexDirection: 'column', gap: 2.5, pt: 2, maxHeight: '62vh', overflowY: 'auto' }}>
+          {/* Dialog Switcher Tabs */}
+          <Tabs
+            value={dialogTab}
+            onChange={(e, val) => setDialogTab(val)}
+            textColor="secondary"
+            indicatorColor="secondary"
+            sx={{ borderBottom: 1, borderColor: 'divider', mb: 1.5 }}
+          >
+            <Tab label="📝 Basic Details" sx={{ fontWeight: 700 }} />
+            <Tab label="🔐 Role Permissions" sx={{ fontWeight: 700 }} />
+            <Tab label="⚡ Pipeline Stages" sx={{ fontWeight: 700 }} />
+          </Tabs>
+
+          {/* TAB 0: Basic Details */}
+          {dialogTab === 0 && (
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2.5 }}>
+              <Box className="grid grid-cols-12 gap-3">
+                <Box className="col-span-8">
+                  <TextField
+                    label="Plan Name"
+                    size="small"
+                    fullWidth
+                    value={planForm.name}
+                    onChange={(e) => setPlanForm(prev => ({ ...prev, name: e.target.value }))}
+                    placeholder="e.g. Pro License, Starter Plan"
+                  />
+                </Box>
+                <Box className="col-span-4">
+                  <FormControlLabel
+                    control={
+                      <Switch
+                        checked={planForm.isRecommended}
+                        onChange={(e) => setPlanForm(prev => ({ ...prev, isRecommended: e.target.checked }))}
+                        color="warning"
+                      />
+                    }
+                    label={<Typography sx={{ fontSize: '0.78rem', fontWeight: 700 }}>Recommended</Typography>}
+                    sx={{ mt: 0.5 }}
+                  />
+                </Box>
+              </Box>
+
+              <Box className="grid grid-cols-12 gap-3">
+                <Box className="col-span-6">
+                  <TextField
+                    label="Price (€)"
+                    type="number"
+                    size="small"
+                    fullWidth
+                    value={planForm.price}
+                    onChange={(e) => setPlanForm(prev => ({ ...prev, price: e.target.value }))}
+                    placeholder="e.g. 199"
+                  />
+                </Box>
+                <Box className="col-span-6">
+                  <TextField
+                    label="Billing Period"
+                    size="small"
+                    fullWidth
+                    value={planForm.billingPeriod}
+                    onChange={(e) => setPlanForm(prev => ({ ...prev, billingPeriod: e.target.value }))}
+                    placeholder="e.g. / month, / year"
+                  />
+                </Box>
+              </Box>
+
+              {/* SaaS Plan Limitations */}
+              <Box className="grid grid-cols-12 gap-3">
+                <Box className="col-span-6">
+                  <TextField
+                    label="Maximum Agents Limit"
+                    type="number"
+                    size="small"
+                    fullWidth
+                    value={planForm.maxAgents !== undefined ? planForm.maxAgents : ''}
+                    onChange={(e) => setPlanForm(prev => ({ ...prev, maxAgents: e.target.value === '' ? '' : parseInt(e.target.value) }))}
+                    helperText="Limit of consultants/employees allowed (-1 for Unlimited)"
+                    slotProps={{ formHelperText: { style: { fontSize: '0.62rem', fontWeight: 600 } } }}
+                  />
+                </Box>
+                <Box className="col-span-6">
+                  <TextField
+                    label="Maximum Leads/Cases Limit"
+                    type="number"
+                    size="small"
+                    fullWidth
+                    value={planForm.maxCases !== undefined ? planForm.maxCases : ''}
+                    onChange={(e) => setPlanForm(prev => ({ ...prev, maxCases: e.target.value === '' ? '' : parseInt(e.target.value) }))}
+                    helperText="Limit of leads/cases allowed (-1 for Unlimited)"
+                    slotProps={{ formHelperText: { style: { fontSize: '0.62rem', fontWeight: 600 } } }}
+                  />
+                </Box>
+              </Box>
+
               <TextField
-                label="Add Plan Feature"
+                label="Plan Description"
                 size="small"
                 fullWidth
-                value={newFeature}
-                onChange={(e) => setNewFeature(e.target.value)}
-                placeholder="e.g. 10 Active Agents, Unlimited Cases"
-                onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleAddFeature(); } }}
+                multiline
+                rows={2}
+                value={planForm.description}
+                onChange={(e) => setPlanForm(prev => ({ ...prev, description: e.target.value }))}
+                placeholder="Brief tagline or description of the target audience..."
               />
-              <Button
-                variant="contained"
-                color="secondary"
-                onClick={handleAddFeature}
-                sx={{ fontWeight: 700, minWidth: 80 }}
-              >
-                Add
-              </Button>
-            </Box>
 
-            <List size="small" sx={{ p: 0, m: 0 }}>
-              {(planForm.features || []).map((feature, index) => (
-                <ListItem
-                  key={index}
-                  secondaryAction={
-                    <IconButton edge="end" size="small" color="error" onClick={() => handleRemoveFeature(index)}>
-                      <DeleteIcon sx={{ fontSize: '1rem' }} />
-                    </IconButton>
-                  }
-                  sx={{ py: 0.5, px: 1, borderBottom: '1px solid', borderColor: 'slate-100' }}
-                >
-                  <ListItemText
-                    primary={<Typography sx={{ fontSize: '0.8rem', fontWeight: 500 }}>{feature}</Typography>}
+              <Box sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 2, p: 2 }}>
+                <Typography variant="subtitle2" sx={{ fontWeight: 800, mb: 1.5, color: '#00205B' }}>
+                  Bullet Features List
+                </Typography>
+                
+                <Box sx={{ display: 'flex', gap: 1, mb: 2 }}>
+                  <TextField
+                    label="Add Plan Feature"
+                    size="small"
+                    fullWidth
+                    value={newFeature}
+                    onChange={(e) => setNewFeature(e.target.value)}
+                    placeholder="e.g. 10 Active Agents, Unlimited Cases"
+                    onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleAddFeature(); } }}
                   />
-                </ListItem>
-              ))}
-            </List>
-          </Box>
+                  <Button
+                    variant="contained"
+                    color="secondary"
+                    onClick={handleAddFeature}
+                    sx={{ fontWeight: 700, minWidth: 80 }}
+                  >
+                    Add
+                  </Button>
+                </Box>
+
+                <Box sx={{ maxHeight: '120px', overflowY: 'auto' }}>
+                  <List size="small" sx={{ p: 0, m: 0 }}>
+                    {(planForm.features || []).map((feature, index) => (
+                      <ListItemButton
+                        key={index}
+                        sx={{ py: 0.5, px: 1, borderBottom: '1px solid', borderColor: 'divider', display: 'flex', justifycontent: 'space-between' }}
+                      >
+                        <Typography sx={{ fontSize: '0.8rem', fontWeight: 500 }}>{feature}</Typography>
+                        <IconButton size="small" color="error" onClick={() => handleRemoveFeature(index)}>
+                          <DeleteIcon sx={{ fontSize: '0.9rem' }} />
+                        </IconButton>
+                      </ListItemButton>
+                    ))}
+                  </List>
+                </Box>
+              </Box>
+            </Box>
+          )}
+
+          {/* TAB 1: Role Permissions */}
+          {dialogTab === 1 && (
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+              <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 800 }}>
+                Select which sidebar navigation menus are enabled for each role under this plan tier.
+              </Typography>
+              <Box className="grid grid-cols-12 gap-3" sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 2, p: 1.5 }}>
+                {/* Role List Side */}
+                <Box className="col-span-4" sx={{ borderRight: '1px solid', borderColor: 'divider', pr: 1.5 }}>
+                  <Typography variant="caption" sx={{ fontWeight: 800, color: 'text.secondary', display: 'block', mb: 1, textTransform: 'uppercase' }}>
+                    Select Role:
+                  </Typography>
+                  <List disablePadding>
+                    {['admin', 'consultant', 'operations', 'finance', 'marketing'].map((r) => (
+                      <ListItemButton
+                        key={r}
+                        selected={selectedRoleForPermissions === r}
+                        onClick={() => setSelectedRoleForPermissions(r)}
+                        sx={{ borderRadius: 1.5, mb: 0.5, py: 0.6, px: 1.5 }}
+                      >
+                        <ListItemText
+                          primary={<Typography sx={{ fontSize: '0.78rem', fontWeight: 700, textTransform: 'capitalize' }}>{r}</Typography>}
+                        />
+                      </ListItemButton>
+                    ))}
+                  </List>
+                </Box>
+                {/* Checkbox List Side */}
+                <Box className="col-span-8" sx={{ pl: 1.5, maxHeight: '280px', overflowY: 'auto' }}>
+                  <Typography variant="subtitle2" sx={{ fontWeight: 800, color: '#00205B', mb: 1.5, textTransform: 'uppercase', fontSize: '0.72rem' }}>
+                    Allowed Menus ({selectedRoleForPermissions})
+                  </Typography>
+                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+                    {ALL_SIDEBAR_MENUS.map((menu) => {
+                      const allowedList = planForm.rolePermissions?.[selectedRoleForPermissions] || [];
+                      const isChecked = allowedList.includes(menu);
+                      return (
+                        <FormControlLabel
+                          key={menu}
+                          control={
+                            <Checkbox
+                              size="small"
+                              checked={isChecked}
+                              color="secondary"
+                              onChange={(e) => {
+                                const currentList = planForm.rolePermissions?.[selectedRoleForPermissions] || [];
+                                const updatedList = e.target.checked
+                                  ? [...currentList, menu]
+                                  : currentList.filter(m => m !== menu);
+                                setPlanForm(prev => ({
+                                  ...prev,
+                                  rolePermissions: {
+                                    ...(prev.rolePermissions || {}),
+                                    [selectedRoleForPermissions]: updatedList
+                                  }
+                                }));
+                              }}
+                            />
+                          }
+                          label={<Typography sx={{ fontSize: '0.78rem', fontWeight: 500 }}>{menu}</Typography>}
+                        />
+                      );
+                    })}
+                  </Box>
+                </Box>
+              </Box>
+            </Box>
+          )}
+
+          {/* TAB 2: Pipeline Stages */}
+          {dialogTab === 2 && (
+            <Box>
+              <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 800, mb: 1.5, display: 'block' }}>
+                Select which pipeline lifecycle stages are available for clients & leads under this plan tier.
+              </Typography>
+              <Box className="grid grid-cols-2 gap-2" sx={{ maxHeight: '260px', overflowY: 'auto', p: 0.5 }}>
+                {DEFAULT_LEAD_STAGES.map((stage) => {
+                  const isChecked = (planForm.stages || []).includes(stage.id);
+                  return (
+                    <Paper
+                      key={stage.id}
+                      sx={{
+                        p: 1,
+                        borderRadius: 2,
+                        border: '1px solid',
+                        borderColor: isChecked ? 'secondary.main' : 'divider',
+                        bgcolor: isChecked ? 'rgba(10, 37, 64, 0.02)' : 'background.paper',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        cursor: 'pointer'
+                      }}
+                      onClick={() => {
+                        const currentStages = planForm.stages || [];
+                        const updatedStages = currentStages.includes(stage.id)
+                          ? currentStages.filter(id => id !== stage.id)
+                          : [...currentStages, stage.id];
+                        setPlanForm(prev => ({
+                          ...prev,
+                          stages: updatedStages
+                        }));
+                      }}
+                    >
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <Typography sx={{ fontSize: '1rem' }}>{stage.emoji}</Typography>
+                        <Box>
+                          <Typography variant="subtitle2" sx={{ fontWeight: 700, fontSize: '0.78rem', lineHeight: 1.1 }}>{stage.name}</Typography>
+                          <Typography variant="caption" color="text.secondary" sx={{ textTransform: 'capitalize', fontSize: '0.62rem' }}>{stage.type}</Typography>
+                        </Box>
+                      </Box>
+                      <Checkbox
+                        size="small"
+                        checked={isChecked}
+                        color="secondary"
+                        onClick={(e) => e.stopPropagation()}
+                        onChange={(e) => {
+                          const currentStages = planForm.stages || [];
+                          const updatedStages = e.target.checked
+                            ? [...currentStages, stage.id]
+                            : currentStages.filter(id => id !== stage.id);
+                          setPlanForm(prev => ({
+                            ...prev,
+                            stages: updatedStages
+                          }));
+                        }}
+                      />
+                    </Paper>
+                  );
+                })}
+              </Box>
+            </Box>
+          )}
         </DialogContent>
         <Divider />
         <DialogActions sx={{ p: 2.5, gap: 1 }}>
@@ -1090,7 +851,7 @@ export const SuperAdminCustomization = () => {
             Cancel
           </Button>
           <Button onClick={handleSavePlanForm} variant="contained" color="secondary" sx={{ fontWeight: 700 }}>
-            Save Plan
+            Save Settings
           </Button>
         </DialogActions>
       </Dialog>
@@ -1099,4 +860,3 @@ export const SuperAdminCustomization = () => {
 };
 
 export default SuperAdminCustomization;
-

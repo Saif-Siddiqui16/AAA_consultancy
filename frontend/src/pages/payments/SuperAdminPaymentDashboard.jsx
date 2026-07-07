@@ -1,710 +1,271 @@
 import React, { useState } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import Box from '@mui/material/Box';
-
-import Button from '@mui/material/Button';
-import Typography from '@mui/material/Typography';
 import Paper from '@mui/material/Paper';
-import Tab from '@mui/material/Tab';
-import Tabs from '@mui/material/Tabs';
-import TextField from '@mui/material/TextField';
-import MenuItem from '@mui/material/MenuItem';
-import Select from '@mui/material/Select';
-import InputLabel from '@mui/material/InputLabel';
-import FormControl from '@mui/material/FormControl';
+import Typography from '@mui/material/Typography';
+import Chip from '@mui/material/Chip';
+import Divider from '@mui/material/Divider';
 import Table from '@mui/material/Table';
 import TableBody from '@mui/material/TableBody';
 import TableCell from '@mui/material/TableCell';
 import TableContainer from '@mui/material/TableContainer';
 import TableHead from '@mui/material/TableHead';
 import TableRow from '@mui/material/TableRow';
-import Chip from '@mui/material/Chip';
-import Card from '@mui/material/Card';
-import CardContent from '@mui/material/CardContent';
-import Divider from '@mui/material/Divider';
 import { BarChart, Bar, ResponsiveContainer, XAxis, YAxis, CartesianGrid, Tooltip as ChartTooltip, Legend, PieChart, Pie, Cell } from 'recharts';
 
 // Icons
 import PaymentsIcon from '@mui/icons-material/Payments';
+import AccountBalanceWalletIcon from '@mui/icons-material/AccountBalanceWallet';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
-import HighlightOffIcon from '@mui/icons-material/HighlightOff';
-import ReceiptIcon from '@mui/icons-material/Receipt';
-import LinkIcon from '@mui/icons-material/Link';
-import RequestQuoteIcon from '@mui/icons-material/RequestQuote';
-import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 
 // Components & Services
-import { dbService } from '../../services/dbService';
 import PageHeader from '../../components/PageHeader';
 import StatCard from '../../components/StatCard';
 import ChartCard from '../../components/ChartCard';
-import AppModal from '../../components/AppModal';
-import { useAlert } from '../../contexts/AlertContext';
+import { SaaSInvoiceReceiptDialog } from './SaaSInvoiceReceiptDialog';
+
+const COLORS = ['#00205B', '#14B8A6', '#F59E0B', '#EF4444'];
 
 export const SuperAdminPaymentDashboard = () => {
-  const queryClient = useQueryClient();
-  const { showAlert } = useAlert();
-  const [tabValue, setTabValue] = useState(0);
-
-  // Modal triggers
-  const [invoiceModalOpen, setInvoiceModalOpen] = useState(false);
-  const [linkModalOpen, setLinkModalOpen] = useState(false);
-  const [receiptModalOpen, setReceiptModalOpen] = useState(false);
   const [selectedInvoice, setSelectedInvoice] = useState(null);
+  const [invoiceModalOpen, setInvoiceModalOpen] = useState(false);
 
-  // Form states
-  const [invoiceForm, setInvoiceForm] = useState({
-    clientId: '',
-    serviceId: 'dnv',
-    packageId: 'full_process',
-    amount: '',
-    discount: '0',
-    status: 'Pending Payment',
-    paymentMethod: '-',
-    thirdPartyPayment: 'No'
-  });
-
-  const [linkForm, setLinkForm] = useState({
-    clientName: '',
-    amount: '',
-    description: ''
-  });
-
-  const [generatedLink, setGeneratedLink] = useState('');
-
-  // Queries
-  const { data: payments = [], isLoading } = useQuery({
-    queryKey: ['payments'],
-    queryFn: dbService.getPayments });
-
-  const { data: clients = [] } = useQuery({
-    queryKey: ['clients'],
-    queryFn: dbService.getClients });
-
-  const { data: agents = [] } = useQuery({
-    queryKey: ['agents'],
-    queryFn: dbService.getAgents });
-
-  // Mutations
-  const createInvoiceMutation = useMutation({
-    mutationFn: dbService.createInvoice,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['payments'] });
-      showAlert('Invoice generated successfully', 'success');
-      setInvoiceModalOpen(false);
-      setInvoiceForm({
-        clientId: '',
-        serviceId: 'dnv',
-        packageId: 'full_process',
-        amount: '',
-        discount: '0',
-        status: 'Pending Payment',
-        paymentMethod: '-',
-        thirdPartyPayment: 'No'
-      });
+  // Load provisioned agencies to calculate SaaS invoice transactions
+  const [agencies] = useState(() => {
+    const saved = localStorage.getItem('provisioned_agencies');
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (e) {}
     }
+    return [
+      {
+        id: 'agency_default',
+        name: 'Sarah Admin',
+        email: 'admin@aaaconsultancy.com',
+        planId: 'growth',
+        planName: 'Growth License',
+        isPaid: true,
+        createdAt: '2026-06-15T08:00:00.000Z'
+      }
+    ];
   });
 
-  const updatePaymentStatusMutation = useMutation({
-    mutationFn: ({ id, status, method, txId }) => dbService.updatePaymentStatus(id, status, method, txId),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['payments'] });
-      queryClient.invalidateQueries({ queryKey: ['clients'] });
-      showAlert('Payment status updated successfully', 'success');
-    }
-  });
+  const getPlanPrice = (planId) => {
+    if (planId === 'starter') return 99;
+    if (planId === 'growth') return 249;
+    if (planId === 'enterprise') return 499;
+    return 199;
+  };
 
-  const backupFileMutation = useMutation({
-    mutationFn: dbService.triggerAWSBackup,
-    onSuccess: () => {
-      showAlert('Document successfully archived to secure AWS storage bucket!', 'success');
-    }
-  });
+  // Generate simulated billing history logs for provisioned agencies
+  const getTransactionLogs = () => {
+    return agencies.map((a, index) => {
+      const price = getPlanPrice(a.planId);
+      const date = a.createdAt ? new Date(a.createdAt) : new Date();
+      return {
+        id: `TX-${10000 + index}`,
+        agencyName: a.name,
+        email: a.email,
+        phone: a.phone || '',
+        planName: a.planName || (a.planId === 'starter' ? 'Starter License' : a.planId === 'growth' ? 'Growth License' : 'Enterprise License'),
+        amount: price,
+        status: a.isPaid ? 'Paid' : 'Pending Verification',
+        method: a.isPaid ? 'Stripe Checkout' : 'Offline Bank Transfer',
+        date: date.toLocaleDateString()
+      };
+    });
+  };
 
-  // Calculations
-  const getRevenueStats = () => {
-    const now = new Date();
-    const todayStr = now.toISOString().split('T')[0];
+  const transactions = getTransactionLogs();
 
-    // Total paid, total refunded, total outstanding
-    let totalPaid = 0;
-    let totalRefunded = 0;
-    let totalOutstanding = 0;
-    let expectedRevenue = 0;
+  // Compute stats
+  const totalPaidRevenue = transactions.filter(t => t.status === 'Paid').reduce((sum, t) => sum + t.amount, 0);
+  const totalPendingRevenue = transactions.filter(t => t.status !== 'Paid').reduce((sum, t) => sum + t.amount, 0);
+  const totalTransactionsCount = transactions.length;
 
-    let revenueToday = 0;
-    let revenueThisWeek = 0;
-    let revenueThisMonth = 0;
-    let revenueThisYear = 0;
-
-    const uniquePaidClients = new Set();
-
-    payments.forEach(p => {
-      const amt = p.amount - (p.discount || 0);
-      expectedRevenue += amt;
-
-      if (p.status === 'Paid') {
-        totalPaid += p.totalPaid;
-        uniquePaidClients.add(p.clientId);
-
-        const pDate = p.billingDate;
-        if (pDate === todayStr) {
-          revenueToday += p.totalPaid;
-        }
-
-        // Month / Year approximations
-        if (pDate.startsWith('2026-06')) {
-          revenueThisMonth += p.totalPaid;
-        }
-        if (pDate.startsWith('2026')) {
-          revenueThisYear += p.totalPaid;
-        }
-
-        // Simple week check (e.g. from June 20th onwards)
-        if (new Date(pDate) >= new Date('2026-06-20')) {
-          revenueThisWeek += p.totalPaid;
-        }
-      } else if (p.status === 'Refunded (50%)') {
-        totalRefunded += Math.abs(p.totalPaid);
-      } else if (p.status === 'Pending' || p.status === 'Pending Payment' || p.status === 'Overdue') {
-        totalOutstanding += amt;
+  // Chart data: split by plan type
+  const getPlanStatsData = () => {
+    const plansCount = { starter: 0, growth: 0, enterprise: 0 };
+    agencies.forEach(a => {
+      if (plansCount[a.planId] !== undefined) {
+        plansCount[a.planId]++;
+      } else {
+        plansCount.growth++;
       }
     });
 
-    const netRevenue = totalPaid - totalRefunded;
-
-    return {
-      totalPaid,
-      totalRefunded,
-      totalOutstanding,
-      expectedRevenue,
-      netRevenue,
-      revenueToday,
-      revenueThisWeek,
-      revenueThisMonth,
-      revenueThisYear,
-      totalPaidClients: uniquePaidClients.size
-    };
+    return [
+      { name: 'Starter License', value: plansCount.starter * 99 },
+      { name: 'Growth License', value: plansCount.growth * 249 },
+      { name: 'Enterprise License', value: plansCount.enterprise * 499 }
+    ].filter(item => item.value > 0);
   };
 
-  const revenueStats = getRevenueStats();
-
-  const stats = [
-    { title: 'Total Collected Revenue', value: `€${revenueStats.totalPaid.toLocaleString()}`, icon: <CheckCircleIcon />, color: '#22C55E' },
-    { title: 'Expected Revenue (Gross)', value: `€${revenueStats.expectedRevenue.toLocaleString()}`, icon: <PaymentsIcon />, color: '#2563EB' },
-    { title: 'Outstanding Receivables', value: `€${revenueStats.totalOutstanding.toLocaleString()}`, icon: <RequestQuoteIcon />, color: '#F59E0B' },
-    { title: 'Net Revenue (Excl. Refunds)', value: `€${revenueStats.netRevenue.toLocaleString()}`, icon: <HighlightOffIcon />, color: '#8B5CF6' }
-  ];
-
-  const timeStats = [
-    { label: 'Revenue Today', value: `€${revenueStats.revenueToday.toLocaleString()}` },
-    { label: 'Revenue This Week', value: `€${revenueStats.revenueThisWeek.toLocaleString()}` },
-    { label: 'Revenue This Month', value: `€${revenueStats.revenueThisMonth.toLocaleString()}` },
-    { label: 'Revenue This Year', value: `€${revenueStats.revenueThisYear.toLocaleString()}` },
-    { label: 'Total Paid Clients', value: `${revenueStats.totalPaidClients}` }
-  ];
-
-  // Pie chart calculations (Payment method share)
-  const methodDataMap = payments.reduce((acc, curr) => {
-    if (curr.status !== 'Paid') return acc;
-    const m = curr.paymentMethod || 'Visa';
-    acc[m] = (acc[m] || 0) + curr.totalPaid;
-    return acc;
-  }, {});
-  const methodData = Object.entries(methodDataMap).map(([name, value]) => ({ name, value }));
-  const COLORS = ['#2563EB', '#14B8A6', '#8B5CF6', '#F59E0B', '#EC4899', '#EF4444'];
-
-  // Bar chart calculations (Revenue by service)
-  const serviceDataMap = payments.reduce((acc, curr) => {
-    if (curr.status !== 'Paid') return acc;
-    const s = curr.serviceId === 'dnv' ? 'Digital Nomad' : curr.serviceId === 'nlv' ? 'NLV' : curr.serviceId === 'study' ? 'Study' : curr.serviceId === 'property' ? 'Golden Visa' : 'Others';
-    acc[s] = (acc[s] || 0) + curr.totalPaid;
-    return acc;
-  }, {});
-  const serviceData = Object.entries(serviceDataMap).map(([name, value]) => ({ name, value }));
-
-  // Helper form submits
-  const handleGenerateInvoice = () => {
-    const client = clients.find(c => c.id === invoiceForm.clientId);
-    if (!client) {
-      showAlert('Please select a client', 'warning');
-      return;
-    }
-    createInvoiceMutation.mutate({
-      clientId: client.id,
-      clientName: `${client.firstName} ${client.lastName}`,
-      serviceId: invoiceForm.serviceId,
-      packageId: invoiceForm.packageId,
-      amount: Number(invoiceForm.amount),
-      discount: Number(invoiceForm.discount),
-      status: invoiceForm.status,
-      paymentMethod: invoiceForm.paymentMethod,
-      thirdPartyPayment: invoiceForm.thirdPartyPayment
-    });
-  };
-
-  const handleGeneratePaymentLink = () => {
-    if (!linkForm.clientName || !linkForm.amount) {
-      showAlert('Please enter client name and amount', 'warning');
-      return;
-    }
-    const slug = Math.random().toString(36).substr(2, 6).toUpperCase();
-    const link = `https://pay.aaabusinessconsultancy.com/checkout/${slug}`;
-    setGeneratedLink(link);
-    showAlert('Payment Link generated successfully', 'success');
-  };
-
-  const handleViewReceipt = (invoice) => {
-    setSelectedInvoice(invoice);
-    setReceiptModalOpen(true);
-  };
-
-  const handleAWSBackup = (invoice) => {
-    backupFileMutation.mutate({
-      name: `${invoice.id}_invoice.pdf`,
-      size: '144 KB',
-      category: 'Invoice Storage'
-    });
-  };
+  const chartData = getPlanStatsData();
 
   return (
-    <Box>
+    <Box sx={{ pb: 4 }}>
       <PageHeader
-        title="Revenue Dashboard"
-        subtitle="Review relocation revenues, outstanding balances, generated payment links, and receipts."
+        title="SaaS Revenue & Invoice Hub"
+        subtitle="Track subscription payouts, monthly recurring billing logs, and SaaS payment transactions."
       />
 
-      {/* Overview stats */}
-      <Box className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-2 mb-4">
-        {stats.map((st, idx) => (
-          <Box key={idx}>
-            <StatCard title={st.title} value={st.value} icon={st.icon} color={st.color} />
-          </Box>
-        ))}
+      <Box className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
+        <StatCard
+          title="Total SaaS Revenue Collected"
+          value={`€${totalPaidRevenue.toLocaleString()}`}
+          icon={<AccountBalanceWalletIcon sx={{ color: '#10B981' }} />}
+          color="#10B981"
+        />
+        <StatCard
+          title="Outstanding / Pending Invoices"
+          value={`€${totalPendingRevenue.toLocaleString()}`}
+          icon={<PaymentsIcon sx={{ color: '#F59E0B' }} />}
+          color="#F59E0B"
+        />
+        <StatCard
+          title="Processed SaaS Payments"
+          value={totalTransactionsCount}
+          icon={<CheckCircleIcon sx={{ color: '#00205B' }} />}
+          color="#00205B"
+        />
       </Box>
 
-      {/* Time Breakdown Cards */}
-      <Paper sx={{ p: 3, mb: 4, borderRadius: 3, border: '1px solid', borderColor: 'divider', boxShadow: 'none' }}>
-        <Box className="grid grid-cols-2 sm:grid-cols-5 gap-2">
-          {timeStats.map((ts, idx) => (
-            <Box key={idx} className="col-span-1 text-center" sx={{ borderRight: idx < 4 ? '1px solid' : 'none', borderColor: 'divider' }}>
-              <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 700, textTransform: 'uppercase' }}>
-                {ts.label}
-              </Typography>
-              <Typography variant="h5" sx={{ fontWeight: 900, mt: 0.5 }}>
-                {ts.value}
-              </Typography>
-            </Box>
-          ))}
-        </Box>
-      </Paper>
+      <Divider sx={{ my: 3 }} />
 
-      {/* Tab panel controls */}
-      <Tabs
-        value={tabValue}
-        onChange={(e, val) => setTabValue(val)}
-        indicatorColor="primary"
-        textColor="primary"
-        sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}
-      >
-        <Tab label="Charts & Visual Insights" />
-        <Tab label="Billing & Payments List" />
-        <Tab label="Client Financial Ledger" />
-        <Tab label="Payment Link & Invoice Console" />
-      </Tabs>
-
-      {/* Tab 0: Charts */}
-      {tabValue === 0 && (
-        <Box className="grid grid-cols-1 md:grid-cols-12 gap-2">
-          <Box className="col-span-12 md:col-span-6">
-            <ChartCard title="Revenue Share by Payment Method" subheader="Stripe, Tabby, Tamara, Visa etc.">
+      <Box className="grid grid-cols-1 md:grid-cols-12 gap-3 mb-4">
+        {/* Plan Revenue Distribution Graph */}
+        <Box className="col-span-12 md:col-span-6">
+          <ChartCard title="Revenue Share by SaaS License" subheader="Distribution of subscription income across plan tiers">
+            {chartData.length === 0 ? (
+              <Typography variant="body2" color="text.secondary" align="center" sx={{ py: 6 }}>
+                No active subscription revenue to display.
+              </Typography>
+            ) : (
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
-                  <Pie
-                    data={methodData}
-                    cx="50%"
-                    cy="45%"
-                    innerRadius={50}
-                    outerRadius={75}
-                    paddingAngle={3}
-                    dataKey="value"
-                    label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`}
-                    fontSize={10}
-                    fontWeight={600}
-                  >
-                    {methodData.map((entry, index) => (
+                  <Pie data={chartData} cx="50%" cy="50%" innerRadius={60} outerRadius={80} paddingAngle={5} dataKey="value" label={({ name, value }) => `${name} (€${value})`}>
+                    {chartData.map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                     ))}
                   </Pie>
-                  <ChartTooltip formatter={(value) => `€${value}`} />
+                  <ChartTooltip formatter={(val) => [`€${val}`, 'Revenue']} />
                 </PieChart>
               </ResponsiveContainer>
-            </ChartCard>
-          </Box>
-
-          <Box className="col-span-12 md:col-span-6">
-            <ChartCard title="Revenue Share by Service" subheader="Digital Nomad, Golden Visa, Student visa revenues">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={serviceData}>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                  <XAxis dataKey="name" fontSize={11} stroke="#94A3B8" />
-                  <YAxis fontSize={11} stroke="#94A3B8" />
-                  <ChartTooltip formatter={(value) => `€${value}`} />
-                  <Bar dataKey="value" fill="#8B5CF6" radius={[4, 4, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            </ChartCard>
-          </Box>
+            )}
+          </ChartCard>
         </Box>
-      )}
 
-      {/* Tab 1: Billing & Payments */}
-      {tabValue === 1 && (
-        <Paper sx={{ p: 3, borderRadius: 3, border: '1px solid', borderColor: 'divider', boxShadow: 'none' }}>
-          <Typography variant="h6" sx={{ fontWeight: 800, mb: 1 }}>
-            Generated Invoices Ledger
-          </Typography>
-          <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-            Track client payments, payment methods, transaction reference keys, and initiate receipts generation or cloud storage backup.
-          </Typography>
-
-          <TableContainer>
-            <Table size="small">
-              <TableHead>
-                <TableRow>
-                  <TableCell sx={{ fontWeight: 700 }}>Invoice ID</TableCell>
-                  <TableCell sx={{ fontWeight: 700 }}>Client</TableCell>
-                  <TableCell sx={{ fontWeight: 700 }}>Service</TableCell>
-                  <TableCell sx={{ fontWeight: 700 }}>Due Amount</TableCell>
-                  <TableCell sx={{ fontWeight: 700 }}>Paid Amount</TableCell>
-                  <TableCell sx={{ fontWeight: 700 }}>Due Date</TableCell>
-                  <TableCell sx={{ fontWeight: 700 }}>Gateway Method</TableCell>
-                  <TableCell sx={{ fontWeight: 700 }}>Status</TableCell>
-                  <TableCell align="right" sx={{ fontWeight: 700 }}>Actions</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {payments.map((p) => {
-                  const dueAmt = p.amount - (p.discount || 0);
-                  return (
-                    <TableRow key={p.id}>
-                      <TableCell sx={{ fontWeight: 600 }}>{p.id}</TableCell>
-                      <TableCell sx={{ fontWeight: 600 }}>{p.clientName}</TableCell>
-                      <TableCell sx={{ textTransform: 'uppercase' }}>{p.serviceId}</TableCell>
-                      <TableCell sx={{ fontWeight: 600 }}>€{dueAmt.toLocaleString()}</TableCell>
-                      <TableCell sx={{ color: 'success.main', fontWeight: 600 }}>€{p.totalPaid.toLocaleString()}</TableCell>
-                      <TableCell>{p.dueDate}</TableCell>
-                      <TableCell sx={{ fontWeight: 700 }}>{p.paymentMethod}</TableCell>
-                      <TableCell>
-                        <Chip
-                          label={p.status}
-                          size="small"
-                          color={p.status === 'Paid' ? 'success' : p.status === 'Refunded (50%)' ? 'error' : 'warning'}
-                          sx={{ fontWeight: 700 }}
-                        />
-                      </TableCell>
-                      <TableCell align="right">
-                        <Box sx={{ display: 'flex', gap: 1, justifyContent: 'flex-end' }}>
-                          {p.status !== 'Paid' && p.status !== 'Refunded (50%)' && (
-                            <Button size="small" variant="contained" color="success" onClick={() => updatePaymentStatusMutation.mutate({ id: p.id, status: 'Paid', method: 'Visa', txId: 'TXN-' + Date.now() })}>
-                              Mark Paid
-                            </Button>
-                          )}
-                          {p.status === 'Paid' && (
-                            <Button size="small" variant="outlined" color="primary" onClick={() => handleViewReceipt(p)}>
-                              Receipt
-                            </Button>
-                          )}
-                          <Button size="small" variant="text" color="secondary" onClick={() => handleAWSBackup(p)}>
-                            AWS Backup
-                          </Button>
-                        </Box>
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
-          </TableContainer>
-        </Paper>
-      )}
-
-      {/* Tab 2: Client Financial Ledger */}
-      {tabValue === 2 && (
-        <Paper sx={{ p: 3, borderRadius: 3, border: '1px solid', borderColor: 'divider', boxShadow: 'none' }}>
-          <Typography variant="h6" sx={{ fontWeight: 800, mb: 1 }}>
-            Client Outstanding Balances Sheet
-          </Typography>
-          <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-            Monitor consultant assignments, package scopes, fee metrics, paid limits, outstanding totals, and case statuses.
-          </Typography>
-
-          <TableContainer>
-            <Table size="small">
-              <TableHead>
-                <TableRow>
-                  <TableCell sx={{ fontWeight: 700 }}>Client Name</TableCell>
-                  <TableCell sx={{ fontWeight: 700 }}>Service</TableCell>
-                  <TableCell sx={{ fontWeight: 700 }}>Consultant</TableCell>
-                  <TableCell sx={{ fontWeight: 700 }}>Package Type</TableCell>
-                  <TableCell sx={{ fontWeight: 700 }}>Total Fee</TableCell>
-                  <TableCell sx={{ fontWeight: 700 }}>Paid Amount</TableCell>
-                  <TableCell sx={{ fontWeight: 700 }}>Remaining Balance</TableCell>
-                  <TableCell sx={{ fontWeight: 700 }}>Case Status</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {clients.map((c) => {
-                  const clientInvoices = payments.filter(p => p.clientId === c.id);
-                  const totalFee = clientInvoices.reduce((acc, curr) => acc + curr.amount - (curr.discount || 0), 0);
-                  const totalPaid = clientInvoices.filter(p => p.status === 'Paid').reduce((acc, curr) => acc + curr.totalPaid, 0);
-                  const remaining = totalFee - totalPaid;
-                  const agentName = agents.find(a => a.id === c.assignedConsultantId)?.name || 'Unassigned';
-
-                  return (
-                    <TableRow key={c.id}>
-                      <TableCell sx={{ fontWeight: 600 }}>{c.firstName} {c.lastName}</TableCell>
-                      <TableCell sx={{ textTransform: 'uppercase' }}>{c.serviceId}</TableCell>
-                      <TableCell sx={{ fontWeight: 600 }}>{agentName}</TableCell>
-                      <TableCell sx={{ textTransform: 'capitalize' }}>{c.packageId ? c.packageId.replace('_', ' ') : 'Standard'}</TableCell>
-                      <TableCell sx={{ fontWeight: 600 }}>€{totalFee.toLocaleString()}</TableCell>
-                      <TableCell sx={{ color: 'success.main', fontWeight: 600 }}>€{totalPaid.toLocaleString()}</TableCell>
-                      <TableCell sx={{ color: remaining > 0 ? 'warning.main' : 'text.primary', fontWeight: 700 }}>
-                        €{remaining.toLocaleString()}
-                      </TableCell>
-                      <TableCell>
-                        <Chip label={c.status} variant="outlined" size="small" />
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
-          </TableContainer>
-        </Paper>
-      )}
-
-      {/* Tab 3: Billing link and Invoice form Console */}
-      {tabValue === 3 && (
-        <Box spacing={3}>
-          {/* Invoice Generation Form */}
-          <Box xs={12} md={6}>
-            <Paper sx={{ p: 3, borderRadius: 3, border: '1px solid', borderColor: 'divider', boxShadow: 'none' }}>
-              <Typography variant="h6" sx={{ fontWeight: 800, mb: 1 }}>
-                Invoice Generation Console
-              </Typography>
-              <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-                Generate customized invoices for clients.
-              </Typography>
-
-              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                <FormControl fullWidth size="small">
-                  <InputLabel id="client-select-label">Select Client</InputLabel>
-                  <Select
-                    labelId="client-select-label"
-                    value={invoiceForm.clientId}
-                    onChange={(e) => setInvoiceForm({ ...invoiceForm, clientId: e.target.value })}
-                    label="Select Client"
-                  >
-                    {clients.map((c) => (
-                      <MenuItem key={c.id} value={c.id}>
-                        {c.firstName} {c.lastName} ({c.id})
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
-
-                <FormControl fullWidth size="small">
-                  <InputLabel id="service-select-label">Select Service</InputLabel>
-                  <Select
-                    labelId="service-select-label"
-                    value={invoiceForm.serviceId}
-                    onChange={(e) => setInvoiceForm({ ...invoiceForm, serviceId: e.target.value })}
-                    label="Select Service"
-                  >
-                    <MenuItem value="dnv">Digital Nomad Visa (DNV)</MenuItem>
-                    <MenuItem value="nlv">Non-Lucrative Visa (NLV)</MenuItem>
-                    <MenuItem value="study">Study Visa</MenuItem>
-                    <MenuItem value="property">Golden Visa (Property Investment)</MenuItem>
-                    <MenuItem value="family">Family Reunification</MenuItem>
-                  </Select>
-                </FormControl>
-
-                <FormControl fullWidth size="small">
-                  <InputLabel id="package-select-label">Select Package</InputLabel>
-                  <Select
-                    labelId="package-select-label"
-                    value={invoiceForm.packageId}
-                    onChange={(e) => setInvoiceForm({ ...invoiceForm, packageId: e.target.value })}
-                    label="Select Package"
-                  >
-                    <MenuItem value="standard">Standard Consultation</MenuItem>
-                    <MenuItem value="full_process">Full Process Service</MenuItem>
-                    <MenuItem value="premium">Premium Process Service</MenuItem>
-                  </Select>
-                </FormControl>
-
-                <TextField
-                  label="Amount Fee (€)"
-                  type="number"
-                  fullWidth
-                  size="small"
-                  value={invoiceForm.amount}
-                  onChange={(e) => setInvoiceForm({ ...invoiceForm, amount: e.target.value })}
-                />
-
-                <TextField
-                  label="Discount (€)"
-                  type="number"
-                  fullWidth
-                  size="small"
-                  value={invoiceForm.discount}
-                  onChange={(e) => setInvoiceForm({ ...invoiceForm, discount: e.target.value })}
-                />
-
-                <Button variant="contained" color="primary" onClick={handleGenerateInvoice}>
-                  Create Invoice
-                </Button>
-              </Box>
-            </Paper>
-          </Box>
-
-          {/* Payment Link Generation Form */}
-          <Box xs={12} md={6}>
-            <Paper sx={{ p: 3, borderRadius: 3, border: '1px solid', borderColor: 'divider', boxShadow: 'none' }}>
-              <Typography variant="h6" sx={{ fontWeight: 800, mb: 1 }}>
-                Payment Link Generator
-              </Typography>
-              <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-                Generate rapid payment URLs for credit card processing or deposit collections.
-              </Typography>
-
-              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                <TextField
-                  label="Client Name"
-                  fullWidth
-                  size="small"
-                  value={linkForm.clientName}
-                  onChange={(e) => setLinkForm({ ...linkForm, clientName: e.target.value })}
-                />
-
-                <TextField
-                  label="Deposit Amount (€)"
-                  type="number"
-                  fullWidth
-                  size="small"
-                  value={linkForm.amount}
-                  onChange={(e) => setLinkForm({ ...linkForm, amount: e.target.value })}
-                />
-
-                <TextField
-                  label="Payment Description / Category"
-                  multiline
-                  rows={2}
-                  fullWidth
-                  size="small"
-                  value={linkForm.description}
-                  onChange={(e) => setLinkForm({ ...linkForm, description: e.target.value })}
-                />
-
-                <Button variant="contained" color="secondary" startIcon={<LinkIcon />} onClick={handleGeneratePaymentLink}>
-                  Generate Payment Link
-                </Button>
-
-                {generatedLink && (
-                  <Box sx={{ p: 2, mt: 1, bgcolor: 'background.neutral', borderRadius: 2, border: '1px dotted', borderColor: 'primary.main', wordBreak: 'break-all' }}>
-                    <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 700, display: 'block', mb: 0.5 }}>
-                      GENERATED CHECKOUT LINK:
-                    </Typography>
-                    <Typography variant="body2" color="primary.main" sx={{ fontWeight: 700 }}>
-                      {generatedLink}
-                    </Typography>
-                  </Box>
-                )}
-              </Box>
-            </Paper>
-          </Box>
+        {/* Plan Distribution Volume */}
+        <Box className="col-span-12 md:col-span-6">
+          <ChartCard title="Plan Distribution Volume" subheader="Compare active licenses by plan tier">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart
+                data={[
+                  { name: 'Starter', count: agencies.filter(a => a.planId === 'starter').length },
+                  { name: 'Growth', count: agencies.filter(a => a.planId === 'growth').length },
+                  { name: 'Enterprise', count: agencies.filter(a => a.planId === 'enterprise').length }
+                ]}
+                margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
+              >
+                <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                <XAxis dataKey="name" fontSize={12} />
+                <YAxis fontSize={12} allowDecimals={false} />
+                <ChartTooltip />
+                <Bar dataKey="count" name="Active Workspace Licenses" fill="#00205B" radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </ChartCard>
         </Box>
-      )}
+      </Box>
 
-      {/* Modal: Receipt View */}
-      <AppModal
-        open={receiptModalOpen}
-        onClose={() => setReceiptModalOpen(false)}
-        title="Payment Receipt details"
-      >
-        {selectedInvoice && (
-          <Box sx={{ p: 1 }}>
-            <Typography variant="h6" align="center" sx={{ fontWeight: 900, color: 'primary.main', mb: 1 }}>
-              AAA BUSINESS CONSULTANCY
-            </Typography>
-            <Typography variant="caption" align="center" display="block" color="text.secondary" sx={{ mb: 3 }}>
-              Calle Gran Via 45, Madrid, Spain | info@aaabusinessconsultancy.com
-            </Typography>
+      {/* Invoice Ledger Table */}
+      <Paper sx={{ borderRadius: 3, border: '1px solid', borderColor: 'divider', boxShadow: 'none', overflow: 'hidden' }}>
+        <Box sx={{ p: 2, borderBottom: '1px solid', borderColor: 'divider', bgcolor: 'background.neutral' }}>
+          <Typography variant="subtitle2" sx={{ fontWeight: 800, color: 'text.secondary', textTransform: 'uppercase' }}>
+            SaaS Subscription Invoices Ledger
+          </Typography>
+        </Box>
 
-            <Divider sx={{ mb: 2 }} />
+        <TableContainer>
+          <Table>
+            <TableHead>
+              <TableRow>
+                <TableCell sx={{ fontWeight: 800, color: '#00205B' }}>Invoice ID</TableCell>
+                <TableCell sx={{ fontWeight: 800, color: '#00205B' }}>Agency Name</TableCell>
+                <TableCell sx={{ fontWeight: 800, color: '#00205B' }}>SaaS Plan Tier</TableCell>
+                <TableCell sx={{ fontWeight: 800, color: '#00205B' }}>Amount (€)</TableCell>
+                <TableCell sx={{ fontWeight: 800, color: '#00205B' }}>Billing Gateway</TableCell>
+                <TableCell sx={{ fontWeight: 800, color: '#00205B' }}>Transaction Date</TableCell>
+                <TableCell sx={{ fontWeight: 800, color: '#00205B' }}>Status</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {transactions.map((tx) => (
+                <TableRow key={tx.id} hover>
+                  <TableCell
+                    sx={{
+                      fontWeight: 800,
+                      color: 'secondary.main',
+                      cursor: 'pointer',
+                      '&:hover': { textDecoration: 'underline' }
+                    }}
+                    onClick={() => {
+                      setSelectedInvoice({
+                        id: tx.id,
+                        agencyName: tx.agencyName,
+                        email: tx.email,
+                        phone: tx.phone,
+                        planName: tx.planName,
+                        amount: tx.amount,
+                        gateway: tx.method,
+                        date: tx.date,
+                        status: tx.status === 'Paid' ? 'Paid' : 'Unpaid'
+                      });
+                      setInvoiceModalOpen(true);
+                    }}
+                  >
+                    {tx.id}
+                  </TableCell>
+                  <TableCell>
+                    <Box>
+                      <Typography variant="body2" sx={{ fontWeight: 600 }}>{tx.agencyName}</Typography>
+                      <Typography variant="caption" color="text.secondary">{tx.email}</Typography>
+                    </Box>
+                  </TableCell>
+                  <TableCell>
+                    <Chip label={tx.planName} size="small" color="secondary" sx={{ fontWeight: 700 }} />
+                  </TableCell>
+                  <TableCell sx={{ fontWeight: 800 }}>€{tx.amount}</TableCell>
+                  <TableCell>{tx.method}</TableCell>
+                  <TableCell>{tx.date}</TableCell>
+                  <TableCell>
+                    <Chip
+                      label={tx.status}
+                      size="small"
+                      color={tx.status === 'Paid' ? 'success' : 'warning'}
+                      sx={{ fontWeight: 800 }}
+                    />
+                  </TableCell>
+                </TableRow>
+              ))}
+              {transactions.length === 0 && (
+                <TableRow>
+                  <TableCell colSpan={7} align="center" sx={{ py: 4, color: 'text.secondary' }}>
+                    No SaaS license invoices generated.
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </TableContainer>
+      </Paper>
 
-            <Box spacing={2} sx={{ mb: 3 }}>
-              <Box xs={6}>
-                <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 700 }}>RECEIPT FOR:</Typography>
-                <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>{selectedInvoice.clientName}</Typography>
-              </Box>
-              <Box xs={6} align="right">
-                <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 700 }}>INVOICE ID:</Typography>
-                <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>{selectedInvoice.id}</Typography>
-              </Box>
-              <Box xs={6}>
-                <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 700 }}>PAYMENT DATE:</Typography>
-                <Typography variant="subtitle2">{selectedInvoice.billingDate}</Typography>
-              </Box>
-              <Box xs={6} align="right">
-                <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 700 }}>TRANSACTION REFERENCE:</Typography>
-                <Typography variant="subtitle2" sx={{ fontSize: '0.75rem' }}>{selectedInvoice.transactionId}</Typography>
-              </Box>
-            </Box>
-
-            <TableContainer sx={{ mb: 3 }}>
-              <Table size="small">
-                <TableHead sx={{ bgcolor: 'background.neutral' }}>
-                  <TableRow>
-                    <TableCell sx={{ fontWeight: 700 }}>Description</TableCell>
-                    <TableCell align="right" sx={{ fontWeight: 700 }}>Amount</TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  <TableRow>
-                    <TableCell sx={{ textTransform: 'uppercase' }}>
-                      Residency processing fee ({selectedInvoice.serviceId}) - {selectedInvoice.packageId}
-                    </TableCell>
-                    <TableCell align="right">€{selectedInvoice.amount.toLocaleString()}</TableCell>
-                  </TableRow>
-                  {selectedInvoice.discount > 0 && (
-                    <TableRow>
-                      <TableCell sx={{ fontStyle: 'italic', color: 'error.main' }}>Discount Applied</TableCell>
-                      <TableCell align="right" sx={{ color: 'error.main' }}>-€{selectedInvoice.discount.toLocaleString()}</TableCell>
-                    </TableRow>
-                  )}
-                  <TableRow sx={{ bgcolor: 'background.neutral' }}>
-                    <TableCell sx={{ fontWeight: 900 }}>Total Paid (Net)</TableCell>
-                    <TableCell align="right" sx={{ fontWeight: 900, color: 'success.main' }}>
-                      €{selectedInvoice.totalPaid.toLocaleString()}
-                    </TableCell>
-                  </TableRow>
-                </TableBody>
-              </Table>
-            </TableContainer>
-
-            <Box sx={{ display: 'flex', gap: 2, justifyContent: 'flex-end', mt: 3 }}>
-              <Button variant="outlined" color="primary" onClick={() => showAlert('Downloading Receipt PDF...', 'info')}>
-                Download PDF
-              </Button>
-              <Button variant="contained" color="success" startIcon={<CloudUploadIcon />} onClick={() => { handleAWSBackup(selectedInvoice); setReceiptModalOpen(false); }}>
-                Backup to S3
-              </Button>
-            </Box>
-          </Box>
-        )}
-      </AppModal>
+      <SaaSInvoiceReceiptDialog
+        open={invoiceModalOpen}
+        onClose={() => setInvoiceModalOpen(false)}
+        invoice={selectedInvoice}
+      />
     </Box>
   );
 };

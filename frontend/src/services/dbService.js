@@ -137,16 +137,157 @@ export const dbService = {
 
   // SETTINGS & CUSTOMIZATION
   getCustomizationSettings: async () => {
-    const res = await apiClient.get('/settings/customization');
-    return res.data;
+    try {
+      const res = await apiClient.get('/settings/customization');
+      localStorage.setItem('local_customization_settings', JSON.stringify(res.data));
+      return res.data;
+    } catch (err) {
+      const saved = localStorage.getItem('local_customization_settings');
+      if (saved) return JSON.parse(saved);
+      
+      const DEFAULT_ROLE_CUSTOMIZATIONS = {
+        admin: {
+          menus: ['Dashboard', 'Agents', 'Active Cases', 'Doc Verification', 'Finance', 'Closed Cases', 'Clients', 'Leads', 'Social Inbox', 'Marketing', 'Calendar', 'All Agents Performance', 'Integrations', 'Subscription', 'Workspace Settings'],
+          cards: ['Total Clients', 'Today\'s Clients', 'Total Consultations', 'Today\'s Consultations', 'Upcoming Meetings', 'Pending Payments', 'Total Revenue', 'Active Cases', 'Completed Cases', 'Lost Consultations', 'Revenue Today', 'Outstanding Revenue', 'Refunded (50% Rejections)']
+        },
+        operations: {
+          menus: ['Dashboard', 'Agents', 'Active Cases', 'Doc Verification', 'Closed Cases', 'Clients', 'Leads', 'Social Inbox', 'Marketing', 'Calendar', 'All Agents Performance'],
+          cards: ['Total Clients', 'Today\'s Clients', 'Total Consultations', 'Today\'s Consultations', 'Upcoming Meetings', 'Active Cases', 'Completed Cases']
+        },
+        finance: {
+          menus: ['Dashboard', 'Finance'],
+          cards: ['Total Revenue', 'Pending Payments']
+        },
+        consultant: {
+          menus: ['Dashboard', 'Clients', 'Leads', 'Social Inbox', 'Calendar'],
+          cards: ['Upcoming Meetings', 'Active Cases']
+        },
+        marketing: {
+          menus: ['Dashboard', 'Leads', 'Marketing'],
+          cards: ['Total Consultations', 'Today\'s Consultations']
+        }
+      };
+      localStorage.setItem('local_customization_settings', JSON.stringify(DEFAULT_ROLE_CUSTOMIZATIONS));
+      return DEFAULT_ROLE_CUSTOMIZATIONS;
+    }
   },
   saveCustomizationSettings: async (settings) => {
-    const res = await apiClient.put('/settings/customization', { settings });
-    return res.data;
+    try {
+      const res = await apiClient.put('/settings/customization', { settings });
+      localStorage.setItem('local_customization_settings', JSON.stringify(settings));
+      return res.data;
+    } catch (err) {
+      localStorage.setItem('local_customization_settings', JSON.stringify(settings));
+      return settings;
+    }
   },
   getLeadStages: async () => {
-    const res = await apiClient.get('/settings/lead-stages');
-    return res.data;
+    try {
+      const userStr = localStorage.getItem('crm-auth-user');
+      const DEFAULT_LEAD_STAGES = [
+        { id: 'stage_new_lead', name: 'New Lead', type: 'lead', color: '#2196F3', emoji: '🆕' },
+        { id: 'stage_hot_lead', name: 'Hot Lead', type: 'lead', color: '#FF9800', emoji: '🔥' },
+        { id: 'stage_processing', name: 'Processing', type: 'lead', color: '#3F51B5', emoji: '⚙️' },
+        { id: 'stage_under_consultation', name: 'Under Consultation', type: 'lead', color: '#9C27B0', emoji: '📅' },
+        { id: 'stage_waiting_payment', name: 'Waiting for Payment', type: 'client', color: '#FF5722', emoji: '💳' },
+        { id: 'stage_documents_pending', name: 'Documents Pending', type: 'client', color: '#E91E63', emoji: '📎' },
+        { id: 'stage_under_process', name: 'Under Process', type: 'client', color: '#03A9F4', emoji: '📂' },
+        { id: 'stage_completed', name: 'Completed', type: 'client', color: '#4CAF50', emoji: '✅' },
+        { id: 'stage_closed', name: 'Closed', type: 'client', color: '#9E9E9E', emoji: '🔒' },
+        { id: 'stage_cold_lead', name: 'Cold Lead', type: 'lead', color: '#009688', emoji: '❄️' },
+        { id: 'stage_lost_lead', name: 'Lost Lead', type: 'lead', color: '#F44336', emoji: '❌' },
+      ];
+
+      if (userStr) {
+        const user = JSON.parse(userStr);
+        if (user.role !== 'super_admin') {
+          const email = user.email || '';
+          const domain = email.split('@')[1]?.toLowerCase();
+          if (domain) {
+            const agenciesStr = localStorage.getItem('provisioned_agencies');
+            if (agenciesStr) {
+              const agencies = JSON.parse(agenciesStr);
+              const foundAgency = agencies.find(a => a.email.toLowerCase().includes(domain));
+              if (foundAgency) {
+                const planId = foundAgency.planId || 'growth';
+                const plansStr = localStorage.getItem('saas_plans');
+                if (plansStr) {
+                  const plans = JSON.parse(plansStr);
+                  const foundPlan = plans.find(p => p.id === planId);
+                  if (foundPlan && foundPlan.stages) {
+                    return DEFAULT_LEAD_STAGES.filter(s => foundPlan.stages.includes(s.id));
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    } catch (e) {
+      console.error("Failed to filter lead stages off plan config:", e);
+    }
+
+    try {
+      const res = await apiClient.get('/settings/lead-stages');
+      return res.data;
+    } catch (err) {
+      const savedLocal = localStorage.getItem('local_customization_stages');
+      if (savedLocal) return JSON.parse(savedLocal);
+      return [
+        { id: 'stage_new_lead', name: 'New Lead', type: 'lead', color: '#2196F3', emoji: '🆕' },
+        { id: 'stage_hot_lead', name: 'Hot Lead', type: 'lead', color: '#FF9800', emoji: '🔥' },
+        { id: 'stage_processing', name: 'Processing', type: 'lead', color: '#3F51B5', emoji: '⚙️' },
+        { id: 'stage_under_consultation', name: 'Under Consultation', type: 'lead', color: '#9C27B0', emoji: '📅' },
+        { id: 'stage_waiting_payment', name: 'Waiting for Payment', type: 'client', color: '#FF5722', emoji: '💳' },
+        { id: 'stage_documents_pending', name: 'Documents Pending', type: 'client', color: '#E91E63', emoji: '📎' },
+        { id: 'stage_under_process', name: 'Under Process', type: 'client', color: '#03A9F4', emoji: '📂' },
+        { id: 'stage_completed', name: 'Completed', type: 'client', color: '#4CAF50', emoji: '✅' },
+        { id: 'stage_closed', name: 'Closed', type: 'client', color: '#9E9E9E', emoji: '🔒' },
+        { id: 'stage_cold_lead', name: 'Cold Lead', type: 'lead', color: '#009688', emoji: '❄️' },
+        { id: 'stage_lost_lead', name: 'Lost Lead', type: 'lead', color: '#F44336', emoji: '❌' },
+      ];
+    }
+  },
+
+  checkPlanLimit: (type) => {
+    try {
+      const userStr = localStorage.getItem('crm-auth-user');
+      if (!userStr) return { ok: true };
+      const user = JSON.parse(userStr);
+      if (user.role === 'super_admin') return { ok: true };
+
+      const email = user.email || '';
+      const domain = email.split('@')[1]?.toLowerCase();
+      if (!domain) return { ok: true };
+
+      const agenciesStr = localStorage.getItem('provisioned_agencies');
+      if (!agenciesStr) return { ok: true };
+      const agencies = JSON.parse(agenciesStr);
+      const foundAgency = agencies.find(a => a.email.toLowerCase().includes(domain));
+      if (!foundAgency) return { ok: true };
+
+      const planId = foundAgency.planId || 'growth';
+      const plansStr = localStorage.getItem('saas_plans');
+      if (!plansStr) return { ok: true };
+      const plans = JSON.parse(plansStr);
+      const foundPlan = plans.find(p => p.id === planId);
+      if (!foundPlan) return { ok: true };
+
+      if (type === 'agents') {
+        const limit = foundPlan.maxAgents !== undefined ? parseInt(foundPlan.maxAgents) : -1;
+        if (limit !== -1) {
+          return { ok: false, limit, planName: foundPlan.name };
+        }
+      } else if (type === 'cases') {
+        const limit = foundPlan.maxCases !== undefined ? parseInt(foundPlan.maxCases) : -1;
+        if (limit !== -1) {
+          return { ok: false, limit, planName: foundPlan.name };
+        }
+      }
+    } catch (e) {
+      console.error(e);
+    }
+    return { ok: true };
   },
 
   // AGENTS

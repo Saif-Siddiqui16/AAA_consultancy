@@ -157,6 +157,11 @@ export const Agents = () => {
   };
 
   const handleOpenAddModal = () => {
+    const limitCheck = dbService.checkPlanLimit('agents');
+    if (limitCheck && !limitCheck.ok && agents.length >= limitCheck.limit) {
+      showAlert(`You have reached the maximum agent limit of ${limitCheck.limit} for your ${limitCheck.planName}. Please upgrade your subscription tier.`, 'warning');
+      return;
+    }
     resetForm();
     setOpenAddModal(true);
   };

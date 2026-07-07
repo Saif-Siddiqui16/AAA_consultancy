@@ -88,6 +88,9 @@ import SuperAdminClientList from '../pages/clients/SuperAdminClientList';
 import SuperAdminClientDetails from '../pages/clients/SuperAdminClientDetails';
 import SuperAdminClosedCases from '../pages/clients/SuperAdminClosedCases';
 import SuperAdminAgents from '../pages/team/SuperAdminAgents';
+import SuperAdminActiveLicenses from '../pages/team/SuperAdminActiveLicenses';
+import SuperAdminSuspendedLicenses from '../pages/team/SuperAdminSuspendedLicenses';
+import SuperAdminAgencyDetails from '../pages/team/SuperAdminAgencyDetails';
 import SuperAdminActiveCases from '../pages/team/SuperAdminActiveCases';
 import SuperAdminAgentsPerformance from '../pages/team/SuperAdminAgentsPerformance';
 import SuperAdminMarketing from '../pages/marketing/SuperAdminMarketing';
@@ -97,6 +100,8 @@ import SuperAdminPaymentDashboard from '../pages/payments/SuperAdminPaymentDashb
 import SuperAdminRefundCommissionHub from '../pages/payments/SuperAdminRefundCommissionHub';
 import SuperAdminStorageBackup from '../pages/documents/SuperAdminStorageBackup';
 import SuperAdminCustomization from '../pages/settings/SuperAdminCustomization';
+import AdminCustomization from '../pages/settings/AdminCustomization';
+import AdminSubscription from '../pages/settings/AdminSubscription';
 import Integrations from '../pages/integrations/Integrations';
 
 const getMenuLabelForPath = (path) => {
@@ -104,6 +109,8 @@ const getMenuLabelForPath = (path) => {
 
   if (p.includes('/dashboard')) return 'Dashboard';
   if (p.includes('/agents/performance')) return 'All Agents Performance';
+  if (p.includes('/super_admin/active-licenses')) return 'Active Licenses';
+  if (p.includes('/super_admin/suspended-licenses')) return 'Suspended Licenses';
   if (p.includes('/agents') || p.includes('/team/agents')) return 'Agents';
   if (p.includes('/active-cases')) return 'Active Cases';
   if (p.includes('/documents/verify')) return 'Doc Verification';
@@ -118,6 +125,8 @@ const getMenuLabelForPath = (path) => {
   if (p.includes('/marketing')) return 'Marketing';
   if (p.includes('/consultations/calendar')) return 'Calendar';
   if (p.includes('/integrations')) return 'Integrations';
+  if (p.includes('/admin/customization')) return 'Workspace Settings';
+  if (p.includes('/admin/subscription')) return 'Subscription';
   if (p.includes('/payments') || p.includes('/finance') || p.includes('/invoice')) return 'Finance';
 
   return null;
@@ -341,6 +350,22 @@ export const AppRoutes = () => {
           }
         />
         <Route
+          path="/admin/customization"
+          element={
+            <ProtectedRoute allowedRoles={['admin']}>
+              <AdminCustomization />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/subscription"
+          element={
+            <ProtectedRoute allowedRoles={['admin']}>
+              <AdminSubscription />
+            </ProtectedRoute>
+          }
+        />
+        <Route
           path="/operations/dashboard"
           element={
             <ProtectedRoute allowedRoles={['operations', 'super_admin']}>
@@ -433,6 +458,30 @@ export const AppRoutes = () => {
           element={
             <ProtectedRoute allowedRoles={['super_admin']}>
               <SuperAdminAgents />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/super_admin/active-licenses"
+          element={
+            <ProtectedRoute allowedRoles={['super_admin']}>
+              <SuperAdminActiveLicenses />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/super_admin/suspended-licenses"
+          element={
+            <ProtectedRoute allowedRoles={['super_admin']}>
+              <SuperAdminSuspendedLicenses />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/super_admin/agency-details/:id"
+          element={
+            <ProtectedRoute allowedRoles={['super_admin']}>
+              <SuperAdminAgencyDetails />
             </ProtectedRoute>
           }
         />

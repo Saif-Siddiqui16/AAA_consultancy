@@ -14,12 +14,33 @@ export default function LandingPage() {
   // Form State for Mock Checkout
   const [agencyName, setAgencyName] = useState('');
   const [adminEmail, setAdminEmail] = useState('');
+  const [adminPassword, setAdminPassword] = useState('');
   const [cardNumber, setCardNumber] = useState('');
   const [expiry, setExpiry] = useState('');
   const [cvv, setCvv] = useState('');
+  const [paymentMethod, setPaymentMethod] = useState(''); // 'upi' | 'card' | 'netbanking'
+  const [upiId, setUpiId] = useState('');
+  const [selectedBank, setSelectedBank] = useState('');
 
   // Dynamic CRM SaaS Plans State
   const [plans, setPlans] = useState([]);
+
+  // Dynamic Contact Details State loaded from localStorage
+  const [contacts, setContacts] = useState(() => {
+    try {
+      const saved = localStorage.getItem('landing_contact_details');
+      if (saved) return JSON.parse(saved);
+    } catch (e) {}
+    return {
+      phone: '+971 50 955 4142',
+      email: 'info@aaaconsultancy.com',
+      address: 'Business Village, Block B, 4th Floor, Office F09 Port Saeed, Deira, Dubai, UAE',
+      facebook: '#',
+      instagram: '#',
+      twitter: '#',
+      linkedin: '#'
+    };
+  });
 
   useEffect(() => {
     const saved = localStorage.getItem('saas_plans');
@@ -97,15 +118,71 @@ export default function LandingPage() {
   const handleOpenCheckout = (plan) => {
     setSelectedPlan(plan);
     setCheckoutStep(1);
+    setPaymentMethod('');
+    setAgencyName('');
+    setAdminEmail('');
+    setAdminPassword('');
+    setCardNumber('');
+    setExpiry('');
+    setCvv('');
+    setUpiId('');
+    setSelectedBank('');
     setShowCheckoutModal(true);
   };
 
   const handleCheckoutSubmit = (e) => {
-    e.preventDefault();
-    if (!agencyName || !adminEmail || !cardNumber) {
+    if (e) e.preventDefault();
+    if (!agencyName || !adminEmail || !adminPassword) {
       alert("Please fill in the required fields");
       return;
     }
+
+    // Provision the agency admin account in localStorage
+    try {
+      const saved = localStorage.getItem('provisioned_agencies');
+      const agencies = saved ? JSON.parse(saved) : [
+        {
+          id: 'agency_default',
+          name: 'Sarah Admin',
+          email: 'admin@aaaconsultancy.com',
+          password: 'password123',
+          phone: '+971 50 123 4567',
+          planId: 'growth',
+          planName: 'Growth License',
+          isPaid: true,
+          createdAt: '2026-06-15T08:00:00.000Z'
+        }
+      ];
+
+      if (agencies.some(a => a.email.toLowerCase() === adminEmail.toLowerCase().trim())) {
+        alert("An account with this email is already registered.");
+        return;
+      }
+
+      // Calculate license validity automatically (current time + 30 days)
+      const now = new Date();
+      const expirationDate = new Date();
+      expirationDate.setDate(now.getDate() + 30);
+
+      const newAgency = {
+        id: 'agency_' + Math.random().toString(36).substring(2, 9),
+        name: agencyName,
+        email: adminEmail.toLowerCase().trim(),
+        password: adminPassword,
+        phone: '+971 50 999 9999',
+        planId: selectedPlan?.code || 'growth',
+        planName: selectedPlan?.name || 'Growth License',
+        isPaid: true,
+        createdAt: now.toISOString(),
+        validUntil: expirationDate.toISOString()
+      };
+
+      agencies.push(newAgency);
+      localStorage.setItem('provisioned_agencies', JSON.stringify(agencies));
+    } catch (err) {
+      console.error(err);
+    }
+
     setCheckoutStep(2);
   };
 
@@ -179,7 +256,7 @@ export default function LandingPage() {
               onClick={handleLoginClick}
               className="px-3.5 py-1.5 bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-500 hover:to-amber-600 active:scale-95 text-slate-950 font-bold rounded-md shadow-md transition-all duration-200 text-[10px] border border-amber-400/20 cursor-pointer"
             >
-              Sign In to CRM
+              Login
             </button>
           </div>
 
@@ -247,7 +324,7 @@ export default function LandingPage() {
                 }}
                 className="w-full text-center py-2 bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold rounded text-[10px]"
               >
-                Sign In to CRM Portal
+                Login
               </button>
             </div>
           </div>
@@ -1023,7 +1100,7 @@ export default function LandingPage() {
                   <span className="text-amber-400 text-[8.5px] sm:text-[9.5px] font-bold uppercase tracking-wider">Calling & WhatsApp</span>
                   <div className="flex items-center space-x-1.5 text-slate-100 font-bold text-xs sm:text-sm">
                     <span className="text-[10px]">🟢</span>
-                    <a href="tel:+971509554142" className="hover:underline">+971 50 955 4142</a>
+                    <a href={`tel:${contacts.phone.replace(/[^+\d]/g, '')}`} className="hover:underline">{contacts.phone}</a>
                   </div>
                 </div>
 
@@ -1031,14 +1108,14 @@ export default function LandingPage() {
                   <span className="text-amber-400 text-[8.5px] sm:text-[9.5px] font-bold uppercase tracking-wider">Email Address</span>
                   <div className="flex items-center space-x-1.5 text-slate-100 font-semibold text-xxs sm:text-xs">
                     <span>📧</span>
-                    <a href="mailto:info@aaaconsultancy.com" className="hover:underline">info@aaaconsultancy.com</a>
+                    <a href={`mailto:${contacts.email}`} className="hover:underline">{contacts.email}</a>
                   </div>
                 </div>
 
                 <div className="p-3.5 bg-white/5 border border-white/10 rounded-lg space-y-0.5 sm:col-span-2 hover:bg-white/10 transition-colors">
                   <span className="text-amber-400 text-[8.5px] sm:text-[9.5px] font-bold uppercase tracking-wider">Office Address (Dubai Headquarter)</span>
                   <p className="text-[10px] sm:text-xs text-slate-200 leading-normal font-light">
-                    🏢 Business Village, Block B, 4th Floor, Office F09 Port Saeed, Deira, Dubai, UAE
+                    🏢 {contacts.address}
                   </p>
                 </div>
               </div>
@@ -1049,19 +1126,19 @@ export default function LandingPage() {
               <h4 className="text-amber-400 font-bold text-xxs sm:text-xs uppercase tracking-wider">Social Channels</h4>
 
               <div className="grid grid-cols-2 gap-2 text-[10px] sm:text-xs">
-                <a href="#" className="flex items-center space-x-1.5 p-1.5 rounded hover:bg-white/5 text-slate-200 transition-colors">
+                <a href={contacts.facebook} target="_blank" rel="noopener noreferrer" className="flex items-center space-x-1.5 p-1.5 rounded hover:bg-white/5 text-slate-200 transition-colors">
                   <span>🔵</span>
                   <span>Facebook</span>
                 </a>
-                <a href="#" className="flex items-center space-x-1.5 p-1.5 rounded hover:bg-white/5 text-slate-200 transition-colors">
+                <a href={contacts.instagram} target="_blank" rel="noopener noreferrer" className="flex items-center space-x-1.5 p-1.5 rounded hover:bg-white/5 text-slate-200 transition-colors">
                   <span>📸</span>
                   <span>Instagram</span>
                 </a>
-                <a href="#" className="flex items-center space-x-1.5 p-1.5 rounded hover:bg-white/5 text-slate-200 transition-colors">
+                <a href={contacts.twitter} target="_blank" rel="noopener noreferrer" className="flex items-center space-x-1.5 p-1.5 rounded hover:bg-white/5 text-slate-200 transition-colors">
                   <span>🐦</span>
                   <span>Twitter / X</span>
                 </a>
-                <a href="#" className="flex items-center space-x-1.5 p-1.5 rounded hover:bg-white/5 text-slate-200 transition-colors">
+                <a href={contacts.linkedin} target="_blank" rel="noopener noreferrer" className="flex items-center space-x-1.5 p-1.5 rounded hover:bg-white/5 text-slate-200 transition-colors">
                   <span>💼</span>
                   <span>LinkedIn</span>
                 </a>
@@ -1114,7 +1191,7 @@ export default function LandingPage() {
             </div>
 
             {checkoutStep === 1 ? (
-              <form onSubmit={handleCheckoutSubmit} className="space-y-3">
+              <div className="space-y-3">
                 {/* Plan details info card */}
                 <div className="bg-[#00205B]/5 border border-[#00205B]/10 rounded-xl p-3 flex justify-between items-center">
                   <div>
@@ -1159,60 +1236,212 @@ export default function LandingPage() {
 
                   <div>
                     <label className="block text-[9px] font-bold uppercase tracking-wider text-slate-500 mb-0.5">
-                      Card Details (Mock billing) *
+                      Create Admin Password *
                     </label>
                     <input
-                      type="text"
+                      type="password"
                       required
-                      placeholder="4111 2222 3333 4444"
-                      value={cardNumber}
-                      onChange={(e) => setCardNumber(e.target.value)}
+                      placeholder="••••••••"
+                      value={adminPassword}
+                      onChange={(e) => setAdminPassword(e.target.value)}
                       className="w-full text-xs px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-[#00205B]/50"
                     />
                   </div>
-
-                  <div className="grid grid-cols-2 gap-2">
-                    <div>
-                      <label className="block text-[9px] font-bold uppercase tracking-wider text-slate-500 mb-0.5">
-                        Expiry Date
-                      </label>
-                      <input
-                        type="text"
-                        placeholder="MM / YY"
-                        value={expiry}
-                        onChange={(e) => setExpiry(e.target.value)}
-                        className="w-full text-xs px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-[#00205B]/50"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-[9px] font-bold uppercase tracking-wider text-slate-500 mb-0.5">
-                        CVV / CVC
-                      </label>
-                      <input
-                        type="password"
-                        placeholder="•••"
-                        value={cvv}
-                        onChange={(e) => setCvv(e.target.value)}
-                        className="w-full text-xs px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-[#00205B]/50"
-                      />
-                    </div>
-                  </div>
                 </div>
 
-                <div className="bg-emerald-500/10 border border-emerald-500/20 p-2.5 rounded-lg flex items-start space-x-1.5">
+                <div className="bg-emerald-500/10 border border-emerald-500/20 p-2.5 rounded-lg flex items-start space-x-1.5 mt-2">
                   <span className="text-emerald-600 text-xs">🛡️</span>
                   <p className="text-[9px] text-emerald-950 font-medium">
-                    This is a secure billing checkout simulation. No real funds will be processed.
+                    This is a secure billing checkout simulation. Expiry is calculated automatically.
                   </p>
                 </div>
 
                 <button
-                  type="submit"
-                  className="w-full py-2.5 bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold text-xs rounded-lg transition-all shadow-sm cursor-pointer"
+                  type="button"
+                  onClick={() => {
+                    if (!agencyName || !adminEmail || !adminPassword) {
+                      alert("Please fill in all agency profile credentials.");
+                      return;
+                    }
+                    setCheckoutStep('payment');
+                  }}
+                  className="w-full py-2.5 bg-[#E8F8F5] border border-emerald-300 hover:bg-[#D1F2EB] text-[#117A65] font-extrabold text-xs rounded-lg transition-all shadow-xs flex items-center justify-center gap-1.5 cursor-pointer mt-4"
                 >
-                  Create Agency CRM Tenant
+                  🟢 Pay Now & Register Agency
                 </button>
-              </form>
+              </div>
+            ) : checkoutStep === 'payment' ? (
+              <div className="space-y-4">
+                <button
+                  type="button"
+                  onClick={() => setCheckoutStep(1)}
+                  className="text-[10px] text-[#00205B] font-bold hover:underline mb-1 flex items-center gap-1 cursor-pointer"
+                >
+                  ← Edit Credentials
+                </button>
+
+                {paymentMethod === '' && (
+                  <div className="space-y-3">
+                    <h4 className="font-extrabold text-xs text-slate-900 mb-1">Choose Payment Method</h4>
+                    
+                    <button
+                      type="button"
+                      onClick={() => setPaymentMethod('upi')}
+                      className="w-full p-3 border border-slate-200 rounded-xl hover:border-emerald-500 hover:bg-emerald-500/5 transition-all text-left flex justify-between items-center cursor-pointer"
+                    >
+                      <div>
+                        <h4 className="font-bold text-xs text-slate-800">Pay via UPI</h4>
+                        <p className="text-[9px] text-slate-500">Google Pay, PhonePe, Paytm, BHIM</p>
+                      </div>
+                      <span className="text-base">📱</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setPaymentMethod('card')}
+                      className="w-full p-3 border border-slate-200 rounded-xl hover:border-emerald-500 hover:bg-emerald-500/5 transition-all text-left flex justify-between items-center cursor-pointer"
+                    >
+                      <div>
+                        <h4 className="font-bold text-xs text-slate-800">Debit / Credit Card</h4>
+                        <p className="text-[9px] text-slate-500">Visa, Mastercard, RuPay, Amex</p>
+                      </div>
+                      <span className="text-base">💳</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setPaymentMethod('netbanking')}
+                      className="w-full p-3 border border-slate-200 rounded-xl hover:border-emerald-500 hover:bg-emerald-500/5 transition-all text-left flex justify-between items-center cursor-pointer"
+                    >
+                      <div>
+                        <h4 className="font-bold text-xs text-slate-800">Net Banking</h4>
+                        <p className="text-[9px] text-slate-500">Direct transfer from Spanish & Global banks</p>
+                      </div>
+                      <span className="text-base">🏦</span>
+                    </button>
+                  </div>
+                )}
+
+                {paymentMethod === 'upi' && (
+                  <div className="space-y-3">
+                    <h4 className="font-extrabold text-xs text-slate-900">Pay via UPI ID</h4>
+                    <div>
+                      <label className="block text-[9px] font-bold uppercase tracking-wider text-slate-500 mb-0.5">
+                        UPI ID *
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="e.g., agency@upi"
+                        value={upiId}
+                        onChange={(e) => setUpiId(e.target.value)}
+                        className="w-full text-xs px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-[#00205B]/50"
+                      />
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (!upiId) { alert("Please enter UPI ID"); return; }
+                        handleCheckoutSubmit();
+                      }}
+                      className="w-full py-2.5 bg-emerald-500 hover:bg-emerald-600 text-white font-bold text-xs rounded-lg transition-all cursor-pointer"
+                    >
+                      Pay {selectedPlan?.price}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setPaymentMethod('')}
+                      className="w-full text-center text-[10px] text-slate-400 font-bold hover:underline cursor-pointer"
+                    >
+                      Back to Payment Methods
+                    </button>
+                  </div>
+                )}
+
+                {paymentMethod === 'card' && (
+                  <div className="space-y-3">
+                    <h4 className="font-extrabold text-xs text-slate-900">Debit / Credit Card Details</h4>
+                    <div>
+                      <label className="block text-[9px] font-bold uppercase tracking-wider text-slate-500 mb-0.5">
+                        Card Number *
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="4111 2222 3333 4444"
+                        value={cardNumber}
+                        onChange={(e) => setCardNumber(e.target.value)}
+                        className="w-full text-xs px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-[#00205B]/50"
+                      />
+                    </div>
+                    <div className="grid grid-cols-2 gap-2 text-[10px] bg-slate-50 p-2 rounded-lg border border-slate-100">
+                      <div>
+                        <span className="block text-slate-400 text-[8px] font-bold">EXPIRY DATE</span>
+                        <span className="font-bold text-slate-700">Auto Calculated</span>
+                      </div>
+                      <div>
+                        <span className="block text-slate-400 text-[8px] font-bold">CVV / CVC</span>
+                        <span className="font-bold text-slate-700">Protected</span>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (!cardNumber) { alert("Please enter your card number"); return; }
+                        handleCheckoutSubmit();
+                      }}
+                      className="w-full py-2.5 bg-emerald-500 hover:bg-emerald-600 text-white font-bold text-xs rounded-lg transition-all cursor-pointer"
+                    >
+                      Pay {selectedPlan?.price}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setPaymentMethod('')}
+                      className="w-full text-center text-[10px] text-slate-400 font-bold hover:underline cursor-pointer"
+                    >
+                      Back to Payment Methods
+                    </button>
+                  </div>
+                )}
+
+                {paymentMethod === 'netbanking' && (
+                  <div className="space-y-3">
+                    <h4 className="font-extrabold text-xs text-slate-900">Net Banking Portal</h4>
+                    <div>
+                      <label className="block text-[9px] font-bold uppercase tracking-wider text-slate-500 mb-0.5">
+                        Select Bank *
+                      </label>
+                      <select
+                        value={selectedBank}
+                        onChange={(e) => setSelectedBank(e.target.value)}
+                        className="w-full text-xs px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-[#00205B]/50"
+                      >
+                        <option value="">-- Choose Bank --</option>
+                        <option value="santander">Banco Santander</option>
+                        <option value="bbva">BBVA Spain</option>
+                        <option value="caixabank">CaixaBank</option>
+                        <option value="sabadell">Banco Sabadell</option>
+                        <option value="hsbc">HSBC Global</option>
+                      </select>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (!selectedBank) { alert("Please select your bank"); return; }
+                        handleCheckoutSubmit();
+                      }}
+                      className="w-full py-2.5 bg-emerald-500 hover:bg-emerald-600 text-white font-bold text-xs rounded-lg transition-all cursor-pointer"
+                    >
+                      Verify & Pay {selectedPlan?.price}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setPaymentMethod('')}
+                      className="w-full text-center text-[10px] text-slate-400 font-bold hover:underline cursor-pointer"
+                    >
+                      Back to Payment Methods
+                    </button>
+                  </div>
+                )}
+              </div>
             ) : (
               <div className="text-center space-y-4 py-2">
                 <div className="w-12 h-12 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto text-xl">

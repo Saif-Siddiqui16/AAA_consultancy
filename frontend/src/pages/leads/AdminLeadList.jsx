@@ -409,7 +409,14 @@ export const AdminLeadList = () => {
               variant="contained"
               color="secondary"
               startIcon={<AddIcon />}
-              onClick={() => setAddModalOpen(true)}
+              onClick={() => {
+                const limitCheck = dbService.checkPlanLimit('cases');
+                if (limitCheck && !limitCheck.ok && leads.length >= limitCheck.limit) {
+                  showAlert(`You have reached the maximum cases/leads limit of ${limitCheck.limit} for your ${limitCheck.planName}. Please upgrade your subscription tier.`, 'warning');
+                  return;
+                }
+                setAddModalOpen(true);
+              }}
             >
               Add New Lead
             </Button>

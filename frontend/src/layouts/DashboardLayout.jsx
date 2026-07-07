@@ -23,6 +23,9 @@ import Popover from '@mui/material/Popover';
 import Collapse from '@mui/material/Collapse';
 
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
+import CheckCircleIcon from '@mui/icons-material/CheckCircle';
+import PauseCircleIcon from '@mui/icons-material/PauseCircle';
+import CreditCardIcon from '@mui/icons-material/CreditCard';
 
 // Icons
 import MenuIcon from '@mui/icons-material/Menu';
@@ -237,6 +240,33 @@ export const DashboardLayout = () => {
     queryFn: dbService.getCustomizationSettings
   });
 
+  // Ensure admin's core menus (Subscription, Workspace Settings) are always in cached customization settings
+  useEffect(() => {
+    if (currentUser?.role !== 'admin') return;
+    try {
+      const saved = localStorage.getItem('local_customization_settings');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        const adminMenus = parsed?.admin?.menus || [];
+        const CORE_ADMIN_MENUS = ['Subscription', 'Workspace Settings'];
+        const missing = CORE_ADMIN_MENUS.filter(m => !adminMenus.includes(m));
+        if (missing.length > 0) {
+          const updated = {
+            ...parsed,
+            admin: {
+              ...(parsed.admin || {}),
+              menus: [...adminMenus, ...missing]
+            }
+          };
+          localStorage.setItem('local_customization_settings', JSON.stringify(updated));
+          queryClient.invalidateQueries({ queryKey: ['customization-settings'] });
+        }
+      }
+    } catch (e) {
+      console.warn('Failed to patch admin core menus in cached settings:', e);
+    }
+  }, [currentUser?.role, queryClient]);
+
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [socialMenuOpen, setSocialMenuOpen] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -323,12 +353,7 @@ export const DashboardLayout = () => {
   const toggleSidebar = () => setSidebarOpen(!sidebarOpen);
   const handleDrawerToggle = () => setMobileOpen(!mobileOpen);
 
-  const handleRoleChange = (event) => {
-    const role = event.target.value;
-    changeRole(role);
-    showAlert(`Role switched to ${role.toUpperCase()}`, 'info');
-    navigate('/dashboard');
-  };
+
 
   const navigateTo = (path) => {
     localStorage.setItem('routing-click-log', `Clicked: ${path} at ${new Date().toLocaleTimeString()}`);
@@ -388,6 +413,8 @@ export const DashboardLayout = () => {
     let prefix = getRolePrefix();
     if (!prefix) return item.path;
 
+    if (item.path.includes('/super_admin/')) return item.path;
+
     // Special override: Dashboard should map strictly to the exact role if it exists
     if (item.path === '/dashboard') {
       if (currentUser.role === 'super_admin') return '/super_admin/dashboard';
@@ -438,22 +465,28 @@ export const DashboardLayout = () => {
       roles: ['admin', 'operations', 'super_admin'],
     },
     {
+      label: 'Active Licenses',
+      icon: <CheckCircleIcon />,
+      path: '/super_admin/active-licenses',
+      roles: ['super_admin'],
+    },
+    {
+      label: 'Suspended Licenses',
+      icon: <PauseCircleIcon />,
+      path: '/super_admin/suspended-licenses',
+      roles: ['super_admin'],
+    },
+    {
       label: 'Active Cases',
       icon: <GroupsIcon />,
       path: '/active-cases',
-      roles: ['admin', 'operations', 'super_admin'],
+      roles: ['admin', 'operations'],
     },
     {
       label: 'Doc Verification',
       icon: <AssignmentTurnedInIcon />,
       path: '/documents/verify',
-      roles: ['admin', 'operations', 'super_admin'],
-    },
-    {
-      label: 'AWS Cloud Backups',
-      icon: <CloudUploadIcon />,
-      path: '/documents/storage',
-      roles: ['super_admin'],
+      roles: ['admin', 'operations'],
     },
     {
       label: 'Finance',
@@ -462,58 +495,64 @@ export const DashboardLayout = () => {
       roles: ['admin', 'finance', 'super_admin'],
     },
     {
-      label: 'Refunds & Commissions',
-      icon: <MonetizationOnIcon />,
-      path: '/payments/refund-commission',
-      roles: ['super_admin'],
-    },
-    {
       label: 'Closed Cases',
       icon: <AssignmentTurnedInIcon />,
       path: '/closed-cases',
-      roles: ['admin', 'operations', 'super_admin'],
+      roles: ['admin', 'operations'],
     },
     {
       label: 'Clients',
       icon: <BusinessCenterIcon />,
       path: '/clients',
-      roles: ['admin', 'consultant', 'operations', 'super_admin'],
+      roles: ['admin', 'consultant', 'operations'],
     },
     {
       label: 'Leads',
       icon: <PeopleIcon />,
       path: '/leads',
-      roles: ['admin', 'consultant', 'operations', 'super_admin', 'marketing'],
+      roles: ['admin', 'consultant', 'operations', 'marketing'],
     },
     {
       label: 'Social Inbox',
       icon: <ForumIcon />,
       path: '/social-inbox',
-      roles: ['admin', 'consultant', 'operations', 'super_admin'],
+      roles: ['admin', 'consultant', 'operations'],
     },
     {
       label: 'Marketing',
       icon: <AssessmentIcon />,
       path: '/marketing',
-      roles: ['admin', 'operations', 'super_admin', 'marketing'],
+      roles: ['admin', 'operations', 'marketing'],
     },
     {
       label: 'Integrations',
       icon: <CableIcon />,
       path: '/integrations',
-      roles: ['admin', 'super_admin'],
+      roles: ['admin'],
     },
     {
       label: 'Calendar',
       icon: <CalendarMonthIcon />,
       path: '/consultations/calendar',
-      roles: ['admin', 'consultant', 'operations', 'super_admin'],
+      roles: ['admin', 'consultant', 'operations'],
     },
     {
       label: 'All Agents Performance',
       icon: <AssessmentIcon />,
       path: '/agents/performance',
-      roles: ['admin', 'operations', 'super_admin'],
+      roles: ['admin', 'operations'],
+    },
+    {
+      label: 'Subscription',
+      icon: <CreditCardIcon />,
+      path: '/admin/subscription',
+      roles: ['admin'],
+    },
+    {
+      label: 'Workspace Settings',
+      icon: <SettingsIcon />,
+      path: '/admin/customization',
+      roles: ['admin'],
     },
     {
       label: 'Customization',
@@ -779,23 +818,59 @@ export const DashboardLayout = () => {
 
   // Render navigation item
   const renderNavItem = (item) => {
-    // 1. If user has custom permissions enabled, check against their custom list
-    if (currentUser?.customPermissions?.enabled) {
-      const allowedMenus = currentUser.customPermissions.menus || [];
-      if (!allowedMenus.includes(item.label)) return null;
+    // 0. Core bypass: Admin's settings/subscription pages skip PLAN checks, but still need role check
+    if (currentUser?.role === 'admin' && (item.label === 'Subscription' || item.label === 'Workspace Settings')) {
+      if (!item.roles.includes(currentUser.role)) return null; // still enforce role check
     } else {
-      // 2. Otherwise fall back to role-based settings (or static fallback)
-      if (currentUser?.role !== 'super_admin') {
-        if (customizationSettings && customizationSettings[currentUser?.role]) {
-          const allowedMenus = customizationSettings[currentUser?.role].menus || [];
-          if (!allowedMenus.includes(item.label)) return null;
-        } else {
-          // Fallback to static check if settings are not loaded yet
-          if (!item.roles.includes(currentUser?.role)) return null;
-        }
+      // 1. If user has custom permissions enabled, check against their custom list
+      if (currentUser?.customPermissions?.enabled) {
+        const allowedMenus = currentUser.customPermissions.menus || [];
+        if (!allowedMenus.includes(item.label)) return null;
       } else {
-        // Super admin can see all options they are allowed statically
-        if (!item.roles.includes(currentUser?.role)) return null;
+        // 2. SaaS Plan-Based Menu Filtering Intercept for non-super admins
+        let isPlanRestricted = false;
+        try {
+          if (currentUser && currentUser.role !== 'super_admin') {
+            const email = currentUser.email || '';
+            const domain = email.split('@')[1]?.toLowerCase();
+            if (domain) {
+              const agenciesStr = localStorage.getItem('provisioned_agencies');
+              if (agenciesStr) {
+                const agencies = JSON.parse(agenciesStr);
+                const foundAgency = agencies.find(a => a.email.toLowerCase().includes(domain));
+                if (foundAgency) {
+                  const planId = foundAgency.planId || 'growth';
+                  const plansStr = localStorage.getItem('saas_plans');
+                  if (plansStr) {
+                    const plans = JSON.parse(plansStr);
+                    const foundPlan = plans.find(p => p.id === planId);
+                    if (foundPlan && foundPlan.rolePermissions && foundPlan.rolePermissions[currentUser.role]) {
+                      const allowedPlanMenus = foundPlan.rolePermissions[currentUser.role];
+                      isPlanRestricted = true;
+                      if (!allowedPlanMenus.includes(item.label)) return null;
+                    }
+                  }
+                }
+              }
+            }
+          }
+        } catch (e) {
+          console.error("Failed to filter sidebar menu by SaaS plan permissions:", e);
+        }
+
+        if (!isPlanRestricted) {
+          // Fall back to original role check
+          if (currentUser?.role !== 'super_admin') {
+            if (customizationSettings && customizationSettings[currentUser?.role]) {
+              const allowedMenus = customizationSettings[currentUser?.role].menus || [];
+              if (!allowedMenus.includes(item.label)) return null;
+            } else {
+              if (!item.roles.includes(currentUser?.role)) return null;
+            }
+          } else {
+            if (!item.roles.includes(currentUser?.role)) return null;
+          }
+        }
       }
     }
 
@@ -852,7 +927,11 @@ export const DashboardLayout = () => {
         </ListItemIcon>
         {sidebarOpen && (
           <ListItemText
-            primary={t(item.label === 'Leads' && (currentUser?.role === 'consultant' || currentUser?.role === 'agent') ? 'Leads' : item.label)}
+            primary={
+              currentUser?.role === 'super_admin' && item.label === 'Agents'
+                ? 'Provisioning'
+                : t(item.label)
+            }
             sx={{ m: 0 }}
             slotProps={{
               primary: {
@@ -867,6 +946,43 @@ export const DashboardLayout = () => {
       </ListItemButton>
     );
   };
+
+  // Get active subscription info for logged-in Admin
+  const getSubscriptionStatusText = () => {
+    if (!currentUser || currentUser.role !== 'admin') return null;
+    try {
+      const savedAgencies = localStorage.getItem('provisioned_agencies');
+      const agencies = savedAgencies ? JSON.parse(savedAgencies) : [];
+      const email = currentUser.email || '';
+      const domain = email.split('@')[1]?.toLowerCase();
+
+      const myAgency = agencies.find(a => a.email.toLowerCase().includes(domain));
+      if (!myAgency) return null;
+
+      const planId = myAgency.planId || 'growth';
+      const plansStr = localStorage.getItem('saas_plans');
+      const plans = plansStr ? JSON.parse(plansStr) : [];
+      const foundPlan = plans.find(p => p.id === planId);
+      const planName = foundPlan ? foundPlan.name : planId;
+
+      const joinedDate = myAgency.createdAt ? new Date(myAgency.createdAt) : new Date();
+      const validUntil = myAgency.validUntil ? new Date(myAgency.validUntil) : new Date(joinedDate.getTime() + 30 * 24 * 60 * 60 * 1000);
+      const diffTime = validUntil.getTime() - new Date().getTime();
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+      return {
+        planName,
+        diffDays,
+        validUntilText: validUntil.toLocaleDateString(),
+        isPaid: myAgency.isPaid
+      };
+    } catch (e) {
+      console.error(e);
+      return null;
+    }
+  };
+
+  const subInfo = getSubscriptionStatusText();
 
   const sidebarContent = (
     <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
@@ -1080,31 +1196,6 @@ export const DashboardLayout = () => {
               </Select>
             </FormControl>
 
-            {/* Quick Role Switcher Dropdown (for testing and verification) */}
-            <FormControl size="small" sx={{ minWidth: 105 }}>
-              <Select
-                value={currentUser?.role || 'super_admin'}
-                onChange={handleRoleChange}
-                sx={{ 
-                  borderRadius: 2, 
-                  height: 32, 
-                  bgcolor: 'background.paper', 
-                  fontSize: '0.78rem', 
-                  fontWeight: 800,
-                  border: '1px solid',
-                  borderColor: 'secondary.main',
-                  color: 'secondary.main',
-                  '& .MuiSelect-select': { py: 0.5 }
-                }}
-              >
-                <MenuItem value="super_admin">CEO 👑</MenuItem>
-                <MenuItem value="admin">Manager 💼</MenuItem>
-                <MenuItem value="operations">Ops ⚙️</MenuItem>
-                <MenuItem value="consultant">Agent 🧑‍💼</MenuItem>
-                <MenuItem value="finance">Finance 💵</MenuItem>
-                <MenuItem value="marketing">Marketing 📣</MenuItem>
-              </Select>
-            </FormControl>
 
             {/* Social Inbox Shortcut */}
             <Tooltip title="Social Inbox">

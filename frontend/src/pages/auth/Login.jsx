@@ -23,6 +23,7 @@ import SupportAgentIcon from '@mui/icons-material/SupportAgent';
 import AccountBalanceWalletIcon from '@mui/icons-material/AccountBalanceWallet';
 import SettingsSuggestIcon from '@mui/icons-material/SettingsSuggest';
 import CampaignIcon from '@mui/icons-material/Campaign';
+import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 
 const schema = yup.object().shape({
   email: yup.string().trim().email('Enter a valid email').required('Email is required'),
@@ -49,13 +50,48 @@ export const Login = () => {
 
   const onSubmit = async (data) => {
     try {
-      const res = await dbService.authLogin(data.email.toLowerCase().trim(), data.password);
+      const email = data.email.toLowerCase().trim();
+      const password = data.password;
+
+      // Intercept for provisioned SaaS agencies
+      const savedAgencies = localStorage.getItem('provisioned_agencies');
+      if (savedAgencies) {
+        try {
+          const agencies = JSON.parse(savedAgencies);
+          const found = agencies.find(a => a.email.toLowerCase().trim() === email);
+          if (found) {
+            if (found.password !== password) {
+              throw new Error('Invalid login credentials. Please check email/password.');
+            }
+            if (!found.isPaid) {
+              showAlert('Your agency subscription is unpaid. Please contact the platform Super Admin to activate your account.', 'error');
+              return;
+            }
+            // Log in as Admin
+            const mockUser = {
+              id: found.id,
+              name: found.name,
+              email: found.email,
+              role: 'admin',
+              avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150'
+            };
+            login(mockUser, 'mock-jwt-token-for-agency');
+            showAlert(`Logged in successfully as Admin (${found.name})`, 'success');
+            navigate('/dashboard');
+            return;
+          }
+        } catch (e) {
+          console.error(e);
+        }
+      }
+
+      const res = await dbService.authLogin(email, password);
       login(res.user, res.token);
       showAlert(`Logged in successfully as ${res.user.role}`, 'success');
       navigate('/dashboard');
     } catch (error) {
       console.error("Login failed:", error);
-      showAlert(error.response?.data?.message || 'Invalid login credentials. Please check email/password.', 'error');
+      showAlert(error.message || error.response?.data?.message || 'Invalid login credentials. Please check email/password.', 'error');
     }
   };
 
@@ -131,7 +167,15 @@ export const Login = () => {
   };
 
   return (
-    <Box>
+    <Box sx={{ display: 'flex', flexDirection: 'column' }}>
+      <Button
+        startIcon={<ArrowBackIcon />}
+        onClick={() => navigate('/')}
+        sx={{ mb: 2, color: 'text.secondary', display: 'inline-flex', alignSelf: 'flex-start', textTransform: 'none', fontWeight: 600 }}
+      >
+        Back to Home
+      </Button>
+
       <Box sx={{ mb: 3, textAlign: 'center' }}>
         <Typography variant="h4" sx={{ fontWeight: 700, mb: 1 }}>
           Welcome back
